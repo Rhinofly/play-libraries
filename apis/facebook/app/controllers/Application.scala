@@ -10,16 +10,16 @@ object Application extends Controller with FacebookApi {
   
   val accessDeniedAction = routes.Application.facebookAccessDenied
   
-  class FacebookUser extends AbstractUser with Name
+  case class FacebookUser() extends AbstractUser with Name {
+  }
   
   def index = Action {
-	  Ok(DefaultUserPermission.hasAllFields(new FacebookUser).toString)
+	  Ok("Action ")
   }
   
   def test = FacebookAuthenticated { facebookUser:FacebookUser =>
-   
     Action {
-    	Ok(DefaultUserPermission.hasAllFields(facebookUser).toString)
+    	Ok(facebookUser.toString)
     }
   }
   

@@ -4,8 +4,9 @@
 
 # Home page
 GET     /                           controllers.Application.index
+GET     /test                       controllers.Application.test
 GET     /facebookAccessDenied 		controllers.Application.facebookAccessDenied
-GET		/facebookCallback			controllers.FacebookController.callback(error = "", error_reason = "")
+GET		/facebookCallback			controllers.FacebookController.callback(code:Option[String], error:Option[String], error_reason:Option[String])
 
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.at(path="/public", file)
