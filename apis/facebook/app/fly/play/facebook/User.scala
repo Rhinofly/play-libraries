@@ -12,7 +12,7 @@ import fly.play.facebook.Permission
 import fly.play.facebook.DefaultUserPermission
 
 //TODO set the correct access modifiers for the fields
-abstract class AbstractUser(val id: Option[String]) extends FacebookObject {
+abstract class AbstractUser(id:Option[String]) extends FacebookObject(id) {
   def this() = this(None)
 }
 
@@ -20,7 +20,7 @@ object AbstractUser {
 
   //Method to keep the amount of characters down
   def ->[T1: Manifest, T2: Manifest]: Boolean = {
-    manifest[T2].erasure.isAssignableFrom(manifest[T2].erasure)
+    manifest[T1].erasure.isAssignableFrom(manifest[T2].erasure)
   }
 
   implicit def getFacebookObjectInformation[T <: AbstractUser: Manifest]: FacebookObjectInformation[T] = {
@@ -38,11 +38,14 @@ object AbstractUser {
     new FacebookObjectInformation[T] {
       val fields = f.toList
       val scopePrefix = if (->[AbstractFriend, T]) "friend" else "user"
+      val path = "me"
     }
   }
 }
 
-abstract class AbstractFriend extends AbstractUser
+abstract class AbstractFriend(id:Option[String]) extends AbstractUser(id) {
+  def this() = this(None)
+}
 
 object UserFields {
   val name = 		Field(DefaultUserPermission, "name")

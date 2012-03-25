@@ -4,6 +4,7 @@ import play.api.mvc.Action
 import fly.play.facebook.Facebook
 import play.api.mvc.Session
 import play.api.mvc.Result
+import play.api.Logger
 
 object FacebookController extends Controller {
   def callback(code: Option[String], error: Option[String], error_reason: Option[String]) = Action { implicit request =>
@@ -13,7 +14,8 @@ object FacebookController extends Controller {
     val redirect = (code, error, error_reason) match {
       case (None, Some("access_denied"), Some("user_denied")) => Redirect(session.get(Facebook.keys.accessDeniedCall).get)
       case (Some(code), None, None) => {
-        newSession += (Facebook.keys.accessToken -> code)
+        newSession += (Facebook.keys.code -> code)
+        Logger.info("Received code from facebook " + code)
         Redirect(session.get(Facebook.keys.originatingCall).getOrElse("/"))
       }
       case parameters => BadRequest(parameters.toString)
