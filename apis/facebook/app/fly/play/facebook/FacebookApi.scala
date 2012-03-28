@@ -1,4 +1,6 @@
 package fly.play.facebook
+
+//TODO clean up imports
 import play.api.mvc.Controller
 import play.api.mvc.Action
 import play.api.mvc.BodyParser
@@ -15,9 +17,11 @@ import play.api.mvc.RequestHeader
 import org.scribe.model.Verifier
 import org.scribe.model.Token
 import org.scribe.model.OAuthRequest
+import org.scribe.model.Response
 import org.scribe.model.Verb
 import org.scribe.model.OAuthConstants
 import org.scribe.oauth.OAuthService
+import org.scribe.utils.StreamUtils
 import scala.collection.mutable.ListBuffer
 import play.api.libs.json.JsValue
 import play.api.libs.json.Json
@@ -27,6 +31,9 @@ import play.api.Application
 import play.api.PlayException
 import play.api.libs.concurrent.Promise
 import play.api.libs.concurrent.Akka
+import permissions.Permission
+import java.net.URL
+import java.net.HttpURLConnection
 
 trait FacebookApi { self: Controller =>
 
@@ -44,9 +51,9 @@ trait FacebookApi { self: Controller =>
     .apiSecret(Facebook.keys.appSecret)
     .callback(callWithoutUrlParams(routes.FacebookController.callback(None, None, None)).absoluteURL())
 
-  private def facebookService[T <: FacebookObject]()(implicit requestHeader: RequestHeader, f: FacebookObjectInformation[T], m: Manifest[T]) = {
+  private def facebookService[T <: FacebookObject](scopes: Option[String] = None)(implicit requestHeader: RequestHeader, f: FacebookObjectInformation[T], m: Manifest[T]) = {
     val builder = facebookServiceBuilder
-    f.scopes.foreach(builder.scope(_))
+    scopes.foreach(builder.scope(_))
     builder.build()
   }
 
@@ -56,43 +63,70 @@ trait FacebookApi { self: Controller =>
 
   def FacebookAuthenticated[T <: FacebookObject, A](action: Promise[T] => Action[A])(implicit f: FacebookObjectInformation[T], m: Manifest[T]): Action[(Action[A], A)] = {
 
+    val (requiresAuthentication, scopes) = f.scopes
+
     val authenticatedBodyParser = BodyParser { implicit request =>
 
-      session.get(Facebook.keys.code).map { code =>
+      Logger.info("Creating instance of " + manifest[T].erasure)
+      val facebookObject = manifest[T].erasure.newInstance.asInstanceOf[T]
 
-        import play.api.Play.current
+      val id = facebookObject.id
+      
+      val url = Facebook.url +
+        id.getOrElse(f.path) +
+        "?fields=" + f.fields.map(_.name).mkString(",")
 
-        val facebookObjectPromise = Akka.future {
-          val service = facebookService[T]
+      import play.api.Play.current
 
-          val facebookObject = manifest[T].erasure.newInstance.asInstanceOf[T]
-          val url = Facebook.url +
-            facebookObject.id.getOrElse(f.path) +
-            "?fields=" + f.fields.map(_.name).mkString(",")
+      val result: Option[Promise[T]] = if (requiresAuthentication || id.isEmpty)
 
-          Logger.info("Creating oauth request to " + url)
+        session.get(Facebook.keys.code).map { code =>
 
-          val facebookRequest = new OAuthRequest(Verb.GET, url)
+          Akka.future {
+            val service = facebookService[T]()
 
-          Logger.info("signing request with " + code)
+            Logger.info("Creating oauth request to " + url)
 
-          signRequest(service, code, facebookRequest)
+            val facebookRequest = new OAuthRequest(Verb.GET, url)
 
-          Logger.info("calling facebook " + facebookRequest.getCompleteUrl)
-          //TODO should we do this async?
-          val response = facebookRequest.send
+            Logger.info("Signing request with " + code)
 
-          facebookObject.jsValue = Some(Json.parse(response.getBody))
+            signRequest(service, code, facebookRequest)
 
-          facebookObject
+            Logger.info("Calling facebook " + facebookRequest.getCompleteUrl)
+
+            val response = facebookRequest.send
+
+            facebookObject.jsValue = Some(Json.parse(response.getBody))
+
+            facebookObject
+          }
         }
+      else
+        Some(
+          Akka.future {
+            Logger.info("Calling facebook " + url)
+
+            val facebookRequest = new URL(url).openConnection().asInstanceOf[HttpURLConnection]
+            facebookRequest.setRequestMethod(Verb.GET.name)
+
+            facebookRequest.connect
+
+            val body = StreamUtils.getStreamContents(facebookRequest.getInputStream)
+
+            facebookObject.jsValue = Some(Json.parse(body))
+
+            facebookObject
+          })
+
+      result.map { facebookObjectPromise =>
         val innerAction = action(facebookObjectPromise)
         innerAction.parser(request).mapDone { body =>
           body.right.map(innerBody => (innerAction, innerBody))
         }
       }.getOrElse {
         Done(Left {
-          val authorizationUrl = facebookService[T].getAuthorizationUrl(null)
+          val authorizationUrl = facebookService[T](scopes).getAuthorizationUrl(null)
           Logger.info("Redirecting to facebook for authorization with " + authorizationUrl)
           Redirect(authorizationUrl)
             .withSession(session
@@ -131,41 +165,61 @@ object Facebook {
   }
 }
 
-abstract class FacebookObject(val id: Option[String]) {
+abstract class BasicObject(var jsValue: Option[JsValue]) {
 
-  var jsValue: Option[JsValue] = None
-
+  def this() = this(None)
+  
   def get[T](key: String)(implicit fjs: Reads[T]): T = {
     (jsValue.get \ key).as[T]
   }
+  
+   override def toString = {
+    this.getClass.getSimpleName + " => \n" + jsValue
+  }
+}
+
+abstract class FacebookObject(val id: Option[String]) extends BasicObject {
 
   //needed by the field apply method
   implicit protected val f = this
 
-  override def toString = {
-    this.getClass.getSimpleName + " => \n" + jsValue
-  }
 }
 
 trait FacebookObjectInformation[T <: FacebookObject] {
   val fields: List[Field]
   val scopePrefix: String
   val path: String
-
-  def scopes = {
+  val pathRequiresAccessToken: Boolean
+  
+  def scopes: (Boolean, Option[String]) = {
+    //TODO can this be solved in a more elegant fasion?
     fields
-      .collect { case Field(permission, field) => permission }
-      .collect { case Permission(Some(name)) => name }
+      .collect { case Field(Some(Permission(Some(name))), _) => name }
       .distinct
       .map { scopePrefix + "_" + _ }
-      .mkString(",") match {
-        case "" => None
-        case s => Some(s)
+      .reduceOption(_ + "," + _) match {
+        case x @ Some(_) => (true, x)
+        case None => (false, None)
       }
+
   }
 }
 
-case class Field(val permission: Permission, val name: String) {
+case class Field(val permission: Option[Permission], val name: String) {
+
+  def this(permission: Permission, name: String) = this(Some(permission), name)
+
   def apply[T]()(implicit f: FacebookObject, fjs: Reads[T]): T = f.get[T](name)
+  
 }
 
+class NamedObject(jsValue: Option[JsValue]) extends BasicObject(jsValue) {
+  val id = get[String]("id")
+  val name = get[String]("name")
+}
+
+object NamedObject {
+  implicit object NameObjectReads extends Reads[NamedObject] {
+    def reads(json: JsValue):NamedObject = new NamedObject(Some(json))
+  }
+}
