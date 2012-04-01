@@ -1,6 +1,7 @@
 package fly.play.facebook
 
 //TODO clean up imports
+import play.api.mvc.Cookie
 import play.api.mvc.Controller
 import play.api.mvc.Action
 import play.api.mvc.BodyParser
@@ -34,7 +35,23 @@ import play.api.libs.concurrent.Akka
 import permissions.Permission
 import java.net.URL
 import java.net.HttpURLConnection
+import fly.play.utils.PlayUtils._
+import play.api.Play.current
+import play.api.libs.ws.WS
+import fly.play.utils.SessionCache
+import fly.play.utils.WrappedAction
 
+//TODO create library in utils for oauth 2.0
+/*https://graph.facebook.com/oauth/access_token?
+    client_id=YOUR_APP_ID
+   &redirect_uri=YOUR_REDIRECT_URI
+   &client_secret=YOUR_APP_SECRET
+   &code=CODE_GENERATED_BY_FACEBOOK
+   */
+//access_token=USER_ACESS_TOKEN&expires=NUMBER_OF_SECONDS_UNTIL_TOKEN_EXPIRES
+//
+
+//TODO add state for facebook oAuth
 trait FacebookApi { self: Controller =>
 
   val accessDeniedAction: Call
@@ -61,85 +78,74 @@ trait FacebookApi { self: Controller =>
     service.signRequest(service.getAccessToken(null, new Verifier(code)), request)
   }
 
-  def FacebookAuthenticated[T <: FacebookObject, A](action: Promise[T] => Action[A])(implicit f: FacebookObjectInformation[T], m: Manifest[T]): Action[(Action[A], A)] = {
+  def FacebookAuthenticated[T <: FacebookObject, A](action: Promise[T] => Action[A])(implicit f: FacebookObjectInformation[T], m: Manifest[T]): Action[(Action[(Action[A], A)], (Action[A], A), Option[Cookie])] //these signatures are confusing, haha 
+  = {
+	SessionCache { sessionCache =>
+	    val (requiresAuthentication, scopes) = f.scopes
+	
+	    WrappedAction(action) { implicit request =>
+	      Logger.info("Creating instance of " + manifest[T].erasure)
+	      val facebookObject = manifest[T].erasure.newInstance.asInstanceOf[T]
 
-    val (requiresAuthentication, scopes) = f.scopes
+	      val id = facebookObject.id
+	      
+	      val url = Facebook.url +
+	        id.getOrElse(f.path) +
+	        "?fields=" + f.fields.map(_.name).mkString(",")
 
-    val authenticatedBodyParser = BodyParser { implicit request =>
-
-      Logger.info("Creating instance of " + manifest[T].erasure)
-      val facebookObject = manifest[T].erasure.newInstance.asInstanceOf[T]
-
-      val id = facebookObject.id
-      
-      val url = Facebook.url +
-        id.getOrElse(f.path) +
-        "?fields=" + f.fields.map(_.name).mkString(",")
-
-      import play.api.Play.current
-
-      val result: Option[Promise[T]] = if (requiresAuthentication || id.isEmpty)
-
-        session.get(Facebook.keys.code).map { code =>
-
-          Akka.future {
-            val service = facebookService[T]()
-
-            Logger.info("Creating oauth request to " + url)
-
-            val facebookRequest = new OAuthRequest(Verb.GET, url)
-
-            Logger.info("Signing request with " + code)
-
-            signRequest(service, code, facebookRequest)
-
-            Logger.info("Calling facebook " + facebookRequest.getCompleteUrl)
-
-            val response = facebookRequest.send
-
-            facebookObject.jsValue = Some(Json.parse(response.getBody))
-
-            facebookObject
-          }
-        }
-      else
-        Some(
-          Akka.future {
-            Logger.info("Calling facebook " + url)
-
-            val facebookRequest = new URL(url).openConnection().asInstanceOf[HttpURLConnection]
-            facebookRequest.setRequestMethod(Verb.GET.name)
-
-            facebookRequest.connect
-
-            val body = StreamUtils.getStreamContents(facebookRequest.getInputStream)
-
-            facebookObject.jsValue = Some(Json.parse(body))
-
-            facebookObject
-          })
-
-      result.map { facebookObjectPromise =>
-        val innerAction = action(facebookObjectPromise)
-        innerAction.parser(request).mapDone { body =>
-          body.right.map(innerBody => (innerAction, innerBody))
-        }
-      }.getOrElse {
-        Done(Left {
-          val authorizationUrl = facebookService[T](scopes).getAuthorizationUrl(null)
-          Logger.info("Redirecting to facebook for authorization with " + authorizationUrl)
-          Redirect(authorizationUrl)
-            .withSession(session
-              + (Facebook.keys.originatingCall -> callFromRequest.toString)
-              + (Facebook.keys.accessDeniedCall -> accessDeniedAction.toString))
-        }, Input.Empty)
-      }
-    }
-
-    Action(authenticatedBodyParser) { request =>
-      val (innerAction, innerBody) = request.body
-      innerAction(request.map(_ => innerBody))
-    }
+	      val result: Option[Promise[T]] = if (requiresAuthentication || id.isEmpty)
+	
+	        session.get(Facebook.keys.code).map { code =>
+	
+	          Akka.future {
+	            val service = facebookService[T]()
+	
+	            Logger.info("Creating oauth request to " + url)
+	
+	            val facebookRequest = new OAuthRequest(Verb.GET, url)
+	
+	            Logger.info("Signing request with " + code)
+	
+	            signRequest(service, code, facebookRequest)
+	
+	            Logger.info("Calling facebook " + facebookRequest.getCompleteUrl)
+	
+	            val response = facebookRequest.send
+	
+	            facebookObject.jsValue = Some(Json.parse(response.getBody))
+	
+	            facebookObject
+	          }
+	        }
+	      else
+	        Some(
+	          Akka.future {
+	            Logger.info("Calling facebook " + url)
+	           
+	            ws(url) { response =>
+	               facebookObject.jsValue = Some(response.json)
+	
+	               facebookObject
+	            }
+	          })
+	          
+	       result match {
+	        case Some(facebookObjectPromise) => Right(facebookObjectPromise)
+	        case None => {
+	          val authorizationUrl = facebookService[T](scopes).getAuthorizationUrl(null)
+	          Logger.info("Redirecting to facebook for authorization with " + authorizationUrl)
+	          Left(Redirect(authorizationUrl)
+	            .withSession(session
+	              + (Facebook.keys.originatingCall -> callFromRequest.toString)
+	              + (Facebook.keys.accessDeniedCall -> accessDeniedAction.toString)))
+	        }
+	      }
+	    }
+	    
+	    
+	   
+	  
+	}
 
   }
 
@@ -147,12 +153,10 @@ trait FacebookApi { self: Controller =>
 
 object Facebook {
 
+  
   lazy val url = "https://graph.facebook.com/"
 
   object keys {
-    //TODO move to utils project
-    import play.api.Play.current
-    private def playConfiguration(key: String)(implicit app: Application): Option[String] = app.configuration.getString(key)
 
     lazy val code = playConfiguration("facebook.session.code") getOrElse ("facebook.code")
     lazy val originatingCall = playConfiguration("facebook.session.originatingCall") getOrElse ("facebook.originatingCall")

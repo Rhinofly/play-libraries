@@ -15,7 +15,7 @@ object Application extends Controller with FacebookApi {
     "709386937"
   }
   
-  class FacebookUser extends AbstractUser with LikesUser with AboutMeUser {
+  class FacebookUser extends AbstractUser/*(id)*/ with PublicUser {
   }
   
   def index = Action {
