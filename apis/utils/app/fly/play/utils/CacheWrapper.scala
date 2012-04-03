@@ -15,6 +15,9 @@ class CacheWrapper(val prefix:String) {
   def getOrElse[A](key: String, expiration: Int = 0)(orElse: => A)(implicit app: Application, m: ClassManifest[A]): A = 
     Cache.getOrElse[A](key, expiration)(orElse)
 
-  def getAs[T](key: String)(implicit app: Application, m: ClassManifest[T]): Option[T] = 
-    Cache.getAs[T](key)
+    //TODO file bug for play. Should be typed as Manifest instead of ClassManifest in case type aliases are used
+  def getAs[T](key: String)(implicit app: Application, m: Manifest[T]): Option[T] =
+    get(key).map { item =>
+      if (m.erasure.isAssignableFrom(item.getClass)) Some(item.asInstanceOf[T]) else None
+    }.getOrElse(None)
 }

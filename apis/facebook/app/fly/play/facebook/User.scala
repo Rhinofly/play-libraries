@@ -18,8 +18,13 @@ import java.net.URL
 
 //TODO set the correct access modifiers for the fields
 abstract class AbstractUser(id:Option[String]) extends FacebookObject(id) {
-  def this() = this(None)
+  /**
+   * Sets the id to 'me' (indicating the current user)
+   */
+  def this() = this(Some("me"))
   def this(id:String) = this(Some(id))
+  
+  def pathRequiresAccessToken = path == "me"
 }
 
 object AbstractUser {
@@ -53,10 +58,8 @@ object AbstractUser {
     if (->[Bio, T]) 			f += bio
     
     new FacebookObjectInformation[T] {
-      val fields = f.toList
+      val fields = f.toSeq
       val scopePrefix = if (->[AbstractFriend, T]) "friend" else "user"
-      val path = "me"
-      val pathRequiresAccessToken = true
     }
   }
 }

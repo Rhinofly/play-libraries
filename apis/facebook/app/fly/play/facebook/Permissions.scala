@@ -6,7 +6,6 @@ import fly.play.facebook.user.FirstName
 sealed abstract case class Permission(val name:Option[String])
 
 object Permission {
-  implicit def permissionToOption[T <: Permission](p:T):Option[T] = Some(p)
 }
 
 object AccessTokenPermission 
