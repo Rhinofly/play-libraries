@@ -1,5 +1,5 @@
 <projectDescription>
-  <name>utils</name>
+  <name>api-utils</name>
   <buildSpec>
     <buildCommand>
       <name>org.scala-ide.sdt.core.scalabuilder</name>
