@@ -5,3 +5,7 @@ target
 tmp
 .history
 dist
+/.settings
+/bin
+/.classpath
+/.project
