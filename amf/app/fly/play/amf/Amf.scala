@@ -11,6 +11,7 @@ import java.io.PipedInputStream
 import java.io.ByteArrayOutputStream
 import com.exadel.flamingo.flex.messaging.amf.io.AMF3Deserializer
 import com.exadel.flamingo.flex.messaging.amf.io.AMF3Serializer
+import java.io.ByteArrayInputStream
 
 trait Amf extends BodyParsers { self:Controller =>
 	def amfParser[A]: BodyParser[A] = parse.when(
@@ -21,14 +22,11 @@ trait Amf extends BodyParsers { self:Controller =>
 	
 	def tolerantAmfParser[A]: BodyParser[A] = BodyParser("amf") { request =>
 	  
-	  val input = new PipedInputStream()
-	  val buffer = new PipedOutputStream(input)
 	  
-	  val derializer = new AMF3Deserializer(input)
-	  
-	  Iteratee.foreach[Array[Byte]](bytes => buffer.write(bytes)).mapDone { _ =>
-        Right(derializer.readObject().asInstanceOf[A])
-      }
+	  Iteratee.consume[Array[Byte]]().mapDone { x =>
+		  val derializer = new AMF3Deserializer(new ByteArrayInputStream(x))
+		  Right(derializer.readObject().asInstanceOf[A])
+	  }
 	 
     }
 	
