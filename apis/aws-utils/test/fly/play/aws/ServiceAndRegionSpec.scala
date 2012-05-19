@@ -1,4 +1,4 @@
-package fly.play.awsAuth
+package fly.play.aws
 
 import org.specs2.mutable._
 

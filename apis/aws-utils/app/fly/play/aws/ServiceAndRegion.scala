@@ -1,4 +1,4 @@
-package fly.play.awsAuth
+package fly.play.aws
 
 case class ServiceAndRegion(service: String, region: String)
 
