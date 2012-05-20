@@ -19,8 +19,8 @@ val main = PlayProject(appName, appVersion, appDependencies, mainLang = SCALA).s
 
 The following libraries are available:
 
-- [amf](tree/master/amf) ActionScript Message Format
-- [s3](tree/master/apis/s3) Amazon Simple Storage Service
-- [ses](tree/master/apis/ses) Amazon Simple Email Service
-- [aws-utils](tree/master/apis/aws-utils) Amazon AWS utils (for example Version 4 signing)
-- [sts](tree/master/apis/sts) Amazon Security Token Service
+- [amf](amf) ActionScript Message Format
+- [s3](apis/s3) Amazon Simple Storage Service
+- [ses](apis/ses) Amazon Simple Email Service
+- [aws-utils](apis/aws-utils) Amazon AWS utils (for example Version 4 signing)
+- [sts](apis/sts) Amazon Security Token Service
