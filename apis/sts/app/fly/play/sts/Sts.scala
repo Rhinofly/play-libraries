@@ -23,14 +23,5 @@ object Sts {
 	  	.map(credentialsReponse)
 	}
 	
-	def credentialsReponse = AwsResponse{ (status, response) => 
-	  try
-	  {
-	    //println("status: " + status + " body: " + response.body)
-		  AwsXmlCredentials(response.xml)
-	    //SimpleAwsCredentials("key", "secret")
-	  } catch {
-	    case x => throw new Exception("status: " + status + " message: " + x.getMessage)
-	  }
-	} _
+	def credentialsReponse = AwsResponse { (status, response) => AwsXmlCredentials(response.xml) } _
 }
