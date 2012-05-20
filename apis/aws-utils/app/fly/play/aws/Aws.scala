@@ -13,6 +13,7 @@ import java.util.SimpleTimeZone
 import java.text.SimpleDateFormat
 import fly.play.aws.auth.Signer
 import play.api.libs.ws.SignatureCalculator
+import java.util.Locale
 
 /**
  * Amazon Web Services
@@ -23,6 +24,12 @@ object Aws {
     def sign(request:WS.WSRequest) = request setFollowRedirects true
   }
   
+  def withSigner3(credentials: AwsCredentials): AwsRequestBuilder =
+		  withSigner3(Some(credentials))
+	
+  def withSigner3(credentials: Option[AwsCredentials] = None): AwsRequestBuilder =
+    withSigner(Aws4Signer(credentials getOrElse AwsCredentials.fromConfiguration))
+		  
   def withSigner4(credentials: AwsCredentials): AwsRequestBuilder =
     withSigner4(Some(credentials))
 
@@ -81,7 +88,7 @@ object Aws {
   object dates {
     lazy val timeZone = new SimpleTimeZone(0, "UTC")
 
-    def dateFormat(format: String): SimpleDateFormat = {
+    def dateFormat(format: String, locale:Locale = Locale.getDefault): SimpleDateFormat = {
       val df = new SimpleDateFormat(format)
       df setTimeZone timeZone
       df
@@ -89,7 +96,9 @@ object Aws {
 
     lazy val dateTimeFormat = dateFormat("yyyyMMdd'T'HHmmss'Z'")
     lazy val dateStampFormat = dateFormat("yyyyMMdd")
-    lazy val fullDateTimeFormat = dateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
+    
+    lazy val iso8601DateFormat = dateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
+    lazy val rfc822DateFormat = dateFormat("EEE, dd MMM yyyy HH:mm:ss z", Locale.US);
 
   }
 }
