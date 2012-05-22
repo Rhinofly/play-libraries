@@ -4,6 +4,7 @@ import org.specs2.mutable.{ Specification, Before }
 import play.api.test._
 import play.api.test.Helpers._
 import fly.play.aws.auth.AwsCredentials
+import fly.play.aws.Aws
 import java.io.File
 
 object StsSpec extends Specification with Before {
@@ -15,10 +16,7 @@ object StsSpec extends Specification with Before {
 
       Sts.sessionToken(AwsCredentials.fromConfiguration).await(10000).get match {
         case Left(error) => failure(error.toString)
-        case Right(credentials) => {
-          println(credentials.accessKeyId)
-          success
-        }
+        case Right(credentials) => success
       }
     }
   }
@@ -48,6 +46,31 @@ object StsSpec extends Specification with Before {
 
           }
         }
+      }
+    }
+  }
+
+  "AwsXmlCredentials" should {
+    "extract the correct information" in {
+      val xml = <GetSessionTokenResponse xmlns="https://sts.amazonaws.com/doc/2011-06-15/">
+                  <GetSessionTokenResult>
+                    <Credentials>
+                      <SessionToken>sessionToken</SessionToken>
+                      <SecretAccessKey>secretAccessKey</SecretAccessKey>
+                      <Expiration>2012-10-20T23:12:01.999Z</Expiration>
+                      <AccessKeyId>accessKeyId</AccessKeyId>
+                    </Credentials>
+                  </GetSessionTokenResult>
+                  <ResponseMetadata>
+                    <RequestId>requestId</RequestId>
+                  </ResponseMetadata>
+                </GetSessionTokenResponse>
+
+      AwsXmlCredentials(xml) must beLike {
+        case AwsCredentials("accessKeyId", "secretAccessKey", Some("sessionToken"), Some(date)) =>
+          date must_== Aws.dates.iso8601DateFormat.parse("2012-10-20T23:12:01.999Z")
+        case mismatch:AwsCredentials => failure("Incorrect signature: " + AwsCredentials.unapply(mismatch).toString)
+          
       }
     }
   }

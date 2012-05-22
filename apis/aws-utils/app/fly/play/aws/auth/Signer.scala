@@ -34,11 +34,11 @@ trait SignerUtils {
     md digest
   }
   
-  def sign(str: String, key: String): Array[Byte] = sign(str, key.getBytes(DEFAULT_ENCODING))
+  def sign(str: String, key: String): Array[Byte] = sign(str, key getBytes DEFAULT_ENCODING)
 
-  def sign(str: String, key: Array[Byte]): Array[Byte] = sign(str.getBytes(DEFAULT_ENCODING), key)
+  def sign(str: String, key: Array[Byte]): Array[Byte] = sign(str getBytes DEFAULT_ENCODING, key)
   
-  def sign(data: Array[Byte], key: String): Array[Byte] = sign(data, key.getBytes(DEFAULT_ENCODING))
+  def sign(data: Array[Byte], key: String): Array[Byte] = sign(data, key getBytes DEFAULT_ENCODING)
 
   def sign(data: Array[Byte], key: Array[Byte]): Array[Byte] = {
     val mac = Mac getInstance "HmacSHA256"
@@ -46,5 +46,5 @@ trait SignerUtils {
     mac doFinal data
   }
   
-  def base64Encode(data:Array[Byte]):String = new String(Base64.encodeBase64(data))
+  def base64Encode(data:Array[Byte]):String = new String(Base64 encodeBase64 data)
 }

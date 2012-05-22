@@ -14,6 +14,7 @@ import java.text.SimpleDateFormat
 import fly.play.aws.auth.Signer
 import play.api.libs.ws.SignatureCalculator
 import java.util.Locale
+import fly.play.aws.auth.Aws3Signer
 
 /**
  * Amazon Web Services
@@ -28,7 +29,7 @@ object Aws {
 		  withSigner3(Some(credentials))
 	
   def withSigner3(credentials: Option[AwsCredentials] = None): AwsRequestBuilder =
-    withSigner(Aws4Signer(credentials getOrElse AwsCredentials.fromConfiguration))
+    withSigner(Aws3Signer(credentials getOrElse AwsCredentials.fromConfiguration))
 		  
   def withSigner4(credentials: AwsCredentials): AwsRequestBuilder =
     withSigner4(Some(credentials))
@@ -62,7 +63,7 @@ object Aws {
     def get[A](consumer: ResponseHeaders => Iteratee[Array[Byte], A]): Promise[Iteratee[Array[Byte], A]] =
       sign("GET").get(consumer)
 
-    def post[T](body: T)(implicit wrt: Writeable[T], ct: ContentTypeOf[T]): Promise[Response] =
+    def post[T](body: T)(implicit wrt: Writeable[T], ct: ContentTypeOf[T]): Promise[Response] = 
       sign("POST", body).post(body)
 
     def postAndRetrieveStream[A, T](body: T)(consumer: ResponseHeaders => Iteratee[Array[Byte], A])(implicit wrt: Writeable[T], ct: ContentTypeOf[T]): Promise[Iteratee[Array[Byte], A]] =
@@ -89,14 +90,14 @@ object Aws {
     lazy val timeZone = new SimpleTimeZone(0, "UTC")
 
     def dateFormat(format: String, locale:Locale = Locale.getDefault): SimpleDateFormat = {
-      val df = new SimpleDateFormat(format)
+      val df = new SimpleDateFormat(format, locale)
       df setTimeZone timeZone
       df
     }
 
     lazy val dateTimeFormat = dateFormat("yyyyMMdd'T'HHmmss'Z'")
     lazy val dateStampFormat = dateFormat("yyyyMMdd")
-    
+    										
     lazy val iso8601DateFormat = dateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
     lazy val rfc822DateFormat = dateFormat("EEE, dd MMM yyyy HH:mm:ss z", Locale.US);
 
