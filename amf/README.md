@@ -32,12 +32,11 @@ From an Actionscript perspective:
 
 ```
 
-In order to set it up you need to download the 'amf' Play project and run `play publish-local` in that directory. Then you can add a dependency in your projects `Build.scala` file:
+Dependency definition:
 
 ``` scala
 	val appDependencies = Seq(
-      // Add your project dependencies here,
-      "amf" %% "amf" % "1.0"
+      "amf" %% "amf" % "1.0-SNAPSHOT"
     )
 ```
 
