@@ -16,7 +16,7 @@ object ApplicationBuild extends Build {
 
   val main = PlayProject(appName, appVersion, appDependencies, mainLang = SCALA).settings(
     organization := "nl.rhinofly",
-    //resolvers += rhinoflyRepo,
+    resolvers += rhinoflyRepo,
     publishTo := Some(rhinoflyRepo),
     credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"))
 
