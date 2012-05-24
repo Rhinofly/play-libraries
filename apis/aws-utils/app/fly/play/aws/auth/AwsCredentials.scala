@@ -1,8 +1,8 @@
 package fly.play.aws.auth
 
-import fly.play.utils.PlayUtils.playConfiguration
 import java.util.Date
 import play.api.Play.current
+import fly.play.libraryUtils.PlayConfiguration
 
 trait AwsCredentials {
   def accessKeyId:String
@@ -14,7 +14,7 @@ trait AwsCredentials {
 object AwsCredentials {
   def unapply(c:AwsCredentials):Option[(String, String, Option[String], Option[Date])] = if (c == null) None else Some((c.accessKeyId, c.secretKey, c.sessionToken, c.expiration))
   
-  def fromConfiguration:AwsCredentials = SimpleAwsCredentials(playConfiguration("aws.accessKeyId"), playConfiguration("aws.secretKey"))
+  def fromConfiguration:AwsCredentials = SimpleAwsCredentials(PlayConfiguration("aws.accessKeyId"), PlayConfiguration("aws.secretKey"))
 }
 
 case class SimpleAwsCredentials(accessKeyId:String, secretKey:String, sessionToken:Option[String] = None, expiration:Option[Date] = None) extends AwsCredentials
