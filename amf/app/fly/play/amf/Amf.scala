@@ -14,6 +14,7 @@ import com.exadel.flamingo.flex.messaging.amf.io.AMF3Serializer
 import java.io.ByteArrayInputStream
 
 trait Amf extends BodyParsers { self:Controller =>
+  
 	def amfParser[A]: BodyParser[A] = parse.when(
 	  _.contentType.exists(_ == "application/x-amf"),
       tolerantAmfParser,
@@ -21,13 +22,10 @@ trait Amf extends BodyParsers { self:Controller =>
 	)
 	
 	def tolerantAmfParser[A]: BodyParser[A] = BodyParser("amf") { request =>
-	  
-	  
 	  Iteratee.consume[Array[Byte]]().mapDone { x =>
 		  val derializer = new AMF3Deserializer(new ByteArrayInputStream(x))
 		  Right(derializer.readObject().asInstanceOf[A])
 	  }
-	 
     }
 	
 	def Amf(data:Any):Result = {
