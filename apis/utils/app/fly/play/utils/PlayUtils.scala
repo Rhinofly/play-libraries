@@ -9,9 +9,6 @@ import play.api.PlayException
 
 object PlayUtils {
 
-  def playConfiguration(key: String)(implicit app: Application): String =
-    app.configuration.getString(key).getOrElse(throw PlayException("Configuration error", "Could not find " + key + " in settings"))
-
   def ws[T](url: String)(handler: Response => T): Promise[T] =
     WS.url(url).get().map(handler(_))
 
