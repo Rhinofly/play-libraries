@@ -9,30 +9,17 @@ case class PlayProjectIssue(
     key:Option[String], 
     summary:String, 
     description:String,
-    website:Website) extends Issue {
+    website:Website,
+    hash:Option[String]) extends Issue {
   
   val tpe:IssueType = Bug
   val project:String = "PLAY"
     
   //Website -> tests
-  val customFieldValues = Map(Website.id -> Seq(website.id))  
+  val customFieldValues = Map(Website.key -> Seq(website.id)) ++ hash.map(Hash.key -> Seq(_)).toMap  
 }
 
-sealed abstract class Website(val id:String)
-
-object Website extends (String => Website) {
-	val id = "customfield_10080"
-  
-	case object tests extends Website("tests") 
-  
-	def apply(id:String):Website = id match {
-	  case tests.id => tests
-	  case x => throw new Exception("Unknown website id: " + x)
-	}
-}
-
-
-object PlayProjectIssue extends ((Option[String], String, String, Website) => PlayProjectIssue) with DefaultFormats {
+object PlayProjectIssue extends ((Option[String], String, String, Website, Option[String]) => PlayProjectIssue) with DefaultFormats {
   implicit object playProjectIssueFormat extends Format[PlayProjectIssue] {
     def reads(json:JsValue):PlayProjectIssue = {
       val issue = fromJson[Issue](json) 
@@ -41,9 +28,28 @@ object PlayProjectIssue extends ((Option[String], String, String, Website) => Pl
         issue.key,
         issue.summary, 
         issue.description,
-        Website(issue.customFieldValues(Website.id).head))
+        Website(issue.customFieldValues(Website.key).head),
+        issue.customFieldValues(Hash.key).headOption)
     }
     
     def writes(i:PlayProjectIssue):JsValue = toJson[Issue](i)
   }
+}
+
+object Hash {
+  val key = "customfield_10490"
+}
+
+sealed abstract class Website(val id:String)
+
+object Website extends (String => Website) {
+	val key = "customfield_10080"
+	val name = "Website"
+	  
+	case object tests extends Website("tests") 
+  
+	def apply(id:String):Website = id match {
+	  case tests.id => tests
+	  case x => throw new Exception("Unknown website id: " + x)
+	}
 }

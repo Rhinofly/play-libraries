@@ -12,6 +12,8 @@ import play.api.libs.json.JsObject
 import play.api.libs.json.JsArray
 import play.api.libs.json.JsString
 import play.api.libs.json.Format
+import play.api.libs.json.Reads
+import play.api.libs.json.Json
 
 object Jira extends DefaultFormats {
 
@@ -23,7 +25,8 @@ object Jira extends DefaultFormats {
   //The default json content type is not accepted because it contains the encoding (blame Jira) 
   implicit val contentType = new ContentTypeOf[JsValue](Some("application/json"))
 
-  def call[T](method: String, arguments: JsValue)(converter: JsValue => T): Promise[Either[Error, T]] = 
+  def call[T](method: String, arguments: JsValue)(converter: JsValue => T): Promise[Either[Error, T]] = {
+    //println("call " + method + " arguments: " + Json.stringify(arguments))
     WS
       .url(endpoint + method)
       .post(arguments)
@@ -36,18 +39,19 @@ object Jira extends DefaultFormats {
           case x => Left(Error(x, "Unknown error", None))
         }
       }
+  }
 
-  def callWithToken[T](token:String, method: String, arguments: JsValue)(converter: JsValue => T): Promise[Either[Error, T]] =
-    call(method, JsArray(List(JsString(token), arguments)))(converter)
+  def callWithToken[T](token:String, method: String, arguments: JsValue *)(converter: JsValue => T): Promise[Either[Error, T]] =
+    call(method, JsArray(JsString(token) +: arguments))(converter)
     
-  def callWithToken[T](token:Promise[Either[Error, String]], method: String, arguments: JsValue)(converter: JsValue => T): Promise[Either[Error, T]] =
+  def callWithToken[T](token:Promise[Either[Error, String]], method: String, arguments: JsValue *)(converter: JsValue => T): Promise[Either[Error, T]] =
     token.flatMap {
       case Right(token) =>
-        callWithToken(token, method, arguments)(converter)
+        callWithToken(token, method, arguments: _*)(converter)
     }
 
-  def callWithToken[T](method: String, arguments: JsValue)(converter: JsValue => T): Promise[Either[Error, T]] = 
-    callWithToken(token, method, arguments)(converter)
+  def callWithToken[T](method: String, arguments: JsValue *)(converter: JsValue => T): Promise[Either[Error, T]] = 
+    callWithToken(token, method, arguments: _*)(converter)
   
   def token(username:String, password:String): Promise[Either[Error, String]] = 
     call("login", toJson(Seq(username, password)))(_.as[String])
@@ -62,4 +66,10 @@ object Jira extends DefaultFormats {
     callWithToken("deleteIssue", toJson(issueKey))(json => Success)
     	//With a successful delete we get a 404... Jira bug
     	.map{case Left(Error(404, _, _)) => Right(Success)}
+  
+  def findIssues(query:String):Promise[Either[Error, Seq[Issue]]] = 
+    findIssuesAs[Issue](query)
+    
+  def findIssuesAs[T <: Issue](query:String, maxResults:Int = 10)(implicit reads:Reads[T]):Promise[Either[Error, Seq[T]]] = 
+    callWithToken("getIssuesFromJqlSearch", toJson(query), toJson(maxResults))(_.as[Seq[T]])
 }
