@@ -33,43 +33,47 @@ object Jira extends DefaultFormats {
       .map { r =>
         r.status match {
           case 200 => r.json match {
-	          case error: JsObject if (error \ "error").asOpt[JsObject] != None => Left(fromJson[Error](error))
-	          case x => Right(converter(x))
-	          }
+            case error: JsObject if (error \ "error").asOpt[JsObject] != None => Left(fromJson[Error](error))
+            case x => Right(converter(x))
+          }
           case x => Left(Error(x, "Unknown error", None))
         }
       }
   }
 
-  def callWithToken[T](token:String, method: String, arguments: JsValue *)(converter: JsValue => T): Promise[Either[Error, T]] =
+  def callWithToken[T](token: String, method: String, arguments: JsValue*)(converter: JsValue => T): Promise[Either[Error, T]] =
     call(method, JsArray(JsString(token) +: arguments))(converter)
-    
-  def callWithToken[T](token:Promise[Either[Error, String]], method: String, arguments: JsValue *)(converter: JsValue => T): Promise[Either[Error, T]] =
+
+  def callWithToken[T](token: Promise[Either[Error, String]], method: String, arguments: JsValue*)(converter: JsValue => T): Promise[Either[Error, T]] =
     token.flatMap {
-      case Right(token) =>
-        callWithToken(token, method, arguments: _*)(converter)
+      case Right(token) => callWithToken(token, method, arguments: _*)(converter)
     }
 
-  def callWithToken[T](method: String, arguments: JsValue *)(converter: JsValue => T): Promise[Either[Error, T]] = 
+  def callWithToken[T](method: String, arguments: JsValue*)(converter: JsValue => T): Promise[Either[Error, T]] =
     callWithToken(token, method, arguments: _*)(converter)
-  
-  def token(username:String, password:String): Promise[Either[Error, String]] = 
+
+  def token(username: String, password: String): Promise[Either[Error, String]] =
     call("login", toJson(Seq(username, password)))(_.as[String])
-    
-  def token: Promise[Either[Error, String]] = 
+
+  def token: Promise[Either[Error, String]] =
     token(PlayConfiguration("jira.username"), PlayConfiguration("jira.password"))
 
-  def createIssue[T <: Issue](issue: T)(implicit format:Format[T]): Promise[Either[Error, T]] =
+  def createIssue[T <: Issue](issue: T)(implicit format: Format[T]): Promise[Either[Error, T]] =
     callWithToken("createIssue", toJson(issue))(_.as[T])
 
-  def deleteIssue(issueKey:String):Promise[Either[Error, Success]] =
+  def deleteIssue(issueKey: String): Promise[Either[Error, Success]] =
     callWithToken("deleteIssue", toJson(issueKey))(json => Success)
-    	//With a successful delete we get a 404... Jira bug
-    	.map{case Left(Error(404, _, _)) => Right(Success)}
-  
-  def findIssues(query:String):Promise[Either[Error, Seq[Issue]]] = 
+      //With a successful delete we get a 404... Jira bug
+      .map { case Left(Error(404, _, _)) => Right(Success) }
+
+  def findIssues(query: String): Promise[Either[Error, Seq[Issue]]] =
     findIssuesAs[Issue](query)
-    
-  def findIssuesAs[T <: Issue](query:String, maxResults:Int = 10)(implicit reads:Reads[T]):Promise[Either[Error, Seq[T]]] = 
+
+  def findIssuesAs[T <: Issue](query: String, maxResults: Int = 10)(implicit reads: Reads[T]): Promise[Either[Error, Seq[T]]] =
     callWithToken("getIssuesFromJqlSearch", toJson(query), toJson(maxResults))(_.as[Seq[T]])
+
+  def addComment(issueKey: String, comment: String): Promise[Either[Error, Success]] =
+    callWithToken("addComment", toJson(issueKey), toJson(Map("body" -> toJson(comment))))(json => Success)
+      //With a successful add we get a 404... Jira bug
+      .map { case Left(Error(404, _, _)) => Right(Success) }
 }

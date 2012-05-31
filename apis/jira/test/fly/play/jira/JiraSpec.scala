@@ -6,6 +6,7 @@ import play.api.test.Helpers._
 import play.api.test.FakeApplication
 import java.security.MessageDigest
 import org.apache.commons.codec.binary.Base64
+import java.util.Date
 
 object JiraSpec extends Specification with Before {
   def f = FakeApplication(new java.io.File("./test/"))
@@ -41,7 +42,7 @@ object JiraSpec extends Specification with Before {
 
     var issueKey2 = ""
     val summary = "Issue from automatic test"
-    val description = "This issue is created using the api-jira project test suite. It will be deleted with the next test."
+    val description = new Date + "\nThis issue is created using the api-jira project test suite. It will be deleted with the next test."
     val hash = MessageDigest.getInstance("MD5").digest((summary + description).getBytes).map("%02X" format _).mkString
 
     "create a custom issue" in {
@@ -67,6 +68,11 @@ object JiraSpec extends Specification with Before {
         }
     }
 
+    "add a comment" in {
+      if (issueKey2.isEmpty) failure("No issue was created") else
+      Jira.addComment(issueKey2, "Automatic comment").value.get must_== Right(Success) 
+    }
+    
     "delete that issue" in {
       if (issueKey2.isEmpty) failure("No issue was created") else
         Jira.deleteIssue(issueKey2).value.get must_== Right(Success)
