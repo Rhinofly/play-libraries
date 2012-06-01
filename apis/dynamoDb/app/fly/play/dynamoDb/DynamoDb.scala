@@ -33,6 +33,7 @@ object DynamoDb {
 	  	.post(toJson(body))
 	  	.map(response[ListTablesResponse])
 	
+	/** @see http://docs.amazonwebservices.com/amazondynamodb/latest/developerguide/API_ListTables.html */
 	def listTables(request:ListTablesRequest) = post("ListTables", request, response[ListTablesResponse])
 	def listTables:Promise[Either[DynamoDbException, ListTablesResponse]] = listTables(ListTablesRequest())
 	def listTables(limit:Int):Promise[Either[DynamoDbException, ListTablesResponse]] = listTables(ListTablesRequest(Some(limit)))

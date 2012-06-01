@@ -8,4 +8,5 @@ dist
 /.classpath
 /.project
 /.settings
+/.cache
 test/conf
