@@ -5,7 +5,7 @@ import PlayProject._
 object ApplicationBuild extends Build {
 
     val appName         = "api-jira"
-    val appVersion      = "1.0-SNAPSHOT"
+    val appVersion      = "1.0"
 
     val appDependencies = Seq(
     "nl.rhinofly" %% "library-utils" % "1.0")
