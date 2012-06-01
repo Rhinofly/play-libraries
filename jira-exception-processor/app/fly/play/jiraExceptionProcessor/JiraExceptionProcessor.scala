@@ -15,6 +15,7 @@ import fly.play.ses.Email
 import fly.play.ses.EmailAddress
 import fly.play.ses.Recipient
 import javax.mail.Message
+import play.api.PlayException
 
 object JiraExceptionProcessor {
   lazy val website = PlayConfiguration("jira.play.website")
@@ -44,7 +45,8 @@ object JiraExceptionProcessor {
   def keyValueSeq(key: String, value: Seq[String]): String = keyValue(key, value.mkString(", "))
 
   def reportError(request: RequestHeader, ex: Throwable): Unit = {
-
+	if (!PlayConfiguration("jiraExceptionProcessor.enabled").toBoolean) return
+    
     val result: Either[Error, Success] = try {
       val summary = ex.getMessage
       val description = getStackTraceString(ex)
@@ -62,6 +64,7 @@ object JiraExceptionProcessor {
         }.value.get
 
     } catch {
+      case e:PlayException => throw e
       case e => Left(Error(0, e.getMessage, Some(getStackTraceString(e))))
     }
 
