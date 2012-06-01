@@ -19,3 +19,15 @@ mail.smtp.password="password"
 
 jiraExceptionProcessor.enabled=false
 ```
+
+Usage:
+
+``` scala
+
+object Global extends GlobalSettings {
+	override def onError(request:RequestHeader, ex:Throwable) = {
+	  JiraExceptionProcessor.reportError(request, ex)
+	  super.onError(request, ex)
+	}
+}
+```
