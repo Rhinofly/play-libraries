@@ -8,7 +8,7 @@ The Aws object
 
 This object is mainly used to wrap Play's `WS` component and add signing to it. Usage is like this:
 
-```
+``` scala
 Aws
   .withSigner(...)
   .url(...)
