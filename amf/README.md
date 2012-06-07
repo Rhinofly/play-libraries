@@ -12,7 +12,7 @@ Add a resolver to your project settings:
 
 ``` scala
 val main = PlayProject(appName, appVersion, appDependencies, mainLang = SCALA).settings(
-    resolvers += "Rhinofly Internal Repository" at "http://maven-repository.rhinofly.net:8081/artifactory/libs-releases-local"
+    resolvers += "Rhinofly Internal Repository" at "http://maven-repository.rhinofly.net:8081/artifactory/libs-release-local"
 )
 ```
 
