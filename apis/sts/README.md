@@ -19,5 +19,20 @@ Installation
 Usage
 -----
 
+Retrieve `AwsCredentials` with a session token:
+
 ``` scala
-   
+Sts.sessionToken(awsCredentials).map {
+  case Left(error) => ...
+  case Right(sessionCredentials) => //call Amazon webservice with credentials 
+}
+```
+
+Or you can use the `AwsSessionCredentials`:
+
+``` scala
+val sessionCredentials = AwsSessionCredentials(awsCredentials)
+//call Amazon webservice with credentials
+```
+
+
