@@ -5,28 +5,33 @@ package fly.amf
     import flash.net.URLStream;
     import flash.utils.ByteArray;
 
-    public class AmfClient extends URLStream
+	public class AmfClient extends URLStream
     {
         public function AmfClient()
         {
         }
         
-        public function request(url:String, data:Object, headers:Array = null):void
+		public function get(url:String):void
+		{
+			load(new URLRequest(url));
+		}
+		
+        public function post(url:String, data:Object, headers:Array = null):void
         {
-                var byteArray:ByteArray = new ByteArray();
-                byteArray.writeObject(data);
-                
-                var urlRequest:URLRequest = new URLRequest(url);
-                urlRequest.method = URLRequestMethod.POST;
-                urlRequest.contentType = "application/x-amf";
-                urlRequest.data = byteArray;
-                
-                if (headers != null)
-                {
-                        urlRequest.requestHeaders = headers;
-                }
-                
-                load(urlRequest);
+            var byteArray:ByteArray = new ByteArray();
+            byteArray.writeObject(data);
+            
+            var urlRequest:URLRequest = new URLRequest(url);
+            urlRequest.method = URLRequestMethod.POST;
+            urlRequest.contentType = "application/x-amf";
+            urlRequest.data = byteArray;
+            
+            if (headers != null)
+            {
+                    urlRequest.requestHeaders = headers;
+            }
+            
+            load(urlRequest);
         }
     }
 }
