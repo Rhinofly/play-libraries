@@ -26,14 +26,17 @@ object DynamoDbSpec extends Specification with Before {
     	    case ListTablesResponse(Seq("Table1", "Table2", "Table3"), Some("Table3")) => ok
     	  }
     	  fromJson[ListTablesResponse](parse("""{"TableNames":["Table1","Table2","Table3"]}""")) must beLike {
-    	  case ListTablesResponse(Seq("Table1", "Table2", "Table3"), None) => ok
+    	  	case ListTablesResponse(Seq("Table1", "Table2", "Table3"), None) => ok
     	  }
     	    
     	}
     	
     	"make a successfull request" in {
-    	  DynamoDb.listTables(10).value.get must beLike {
+    	  DynamoDb.listTables(ListTablesRequest(Some(10))).value.get must beLike {
     	    case Right(ListTablesResponse(Seq("Test"), None)) => ok
+    	  }
+    	  DynamoDb(ListTablesRequest(Some(10))).value.get must beLike {
+    	  case Right(ListTablesResponse(Seq("Test"), None)) => ok
     	  }
     	}
 	  }

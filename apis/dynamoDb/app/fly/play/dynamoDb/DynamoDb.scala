@@ -10,13 +10,18 @@ import play.api.libs.ws.Response
 import play.api.libs.json.JsValue
 import play.api.libs.json.Reads
 import play.api.libs.json.Writes
+import fly.play.sts.AwsSessionCredentials
+import fly.play.sts.AwsSessionCredentials
 
 object DynamoDb {
 	
 	val version = "DynamoDB_20111205."
 	val url = "https://dynamodb.us-east-1.amazonaws.com"
 	  
-	lazy val sessionCredentials = AwsSessionCredentials(AwsCredentials.fromConfiguration)
+	def sessionCredentials(implicit credentials:AwsCredentials) = credentials match {
+	  case x:AwsSessionCredentials => x
+	  case x => AwsSessionCredentials(x)
+	}
 	
 	implicit object XAmzJson extends ContentTypeOf[String](Some("application/x-amz-json-1.0"))
 	
@@ -25,7 +30,7 @@ object DynamoDb {
 	  case n => Left(response.json.as[DynamoDbException])
 	}
 	
-	def post[S, T](action:String, body:S, converter:Response => Either[DynamoDbException, T])(implicit wrt:Writes[S]) =  
+	def post[S, T](action:String, body:S, converter:Response => Either[DynamoDbException, T])(implicit wrt:Writes[S], credentials:AwsCredentials) =  
 	  Aws
 	  	.withSigner3(sessionCredentials)
 	  	.url(url)
@@ -34,8 +39,6 @@ object DynamoDb {
 	  	.map(response[ListTablesResponse])
 	
 	/** @see http://docs.amazonwebservices.com/amazondynamodb/latest/developerguide/API_ListTables.html */
-	def listTables(request:ListTablesRequest) = post("ListTables", request, response[ListTablesResponse])
-	def listTables:Promise[Either[DynamoDbException, ListTablesResponse]] = listTables(ListTablesRequest())
-	def listTables(limit:Int):Promise[Either[DynamoDbException, ListTablesResponse]] = listTables(ListTablesRequest(Some(limit)))
-	def listTables(limit:Int, exclusiveStartTableName:String):Promise[Either[DynamoDbException, ListTablesResponse]] = listTables(ListTablesRequest(Some(limit), Some(exclusiveStartTableName)))
+	def listTables(request:ListTablesRequest)(implicit credentials:AwsCredentials) = post("ListTables", request, response[ListTablesResponse])
+	def apply(request:ListTablesRequest)(implicit credentials:AwsCredentials) = listTables(request)
 }
