@@ -6,75 +6,164 @@ import fly.play.sts.AwsSessionCredentials
 import fly.play.aws.auth.AwsCredentials
 import play.api.libs.json.Json.{ toJson, parse, fromJson }
 import play.api.libs.json.JsValue
+import java.util.Date
+import org.specs2.specification.Example
 
 object DynamoDbSpec extends Specification with Before {
+  sequential
+
   def f = FakeApplication(new java.io.File("./test/"))
   def before = play.api.Play.start(f)
 
-  "DynamoDb" in {
-    "list tables" in {
-      "ListTableRequest should create correct json" in {
-        toJson(ListTablesRequest()) must_== toJson(Map[String, JsValue]())
-        toJson(ListTablesRequest(limit = Some(10))) must_== parse("""{ "Limit":10 }""")
-        toJson(ListTablesRequest(exclusiveStartTableName = Some("Test"))) must_== parse("""{"ExclusiveStartTableName":"Test"}""")
-        toJson(ListTablesRequest(Some(10), Some("Test"))) must_== parse("""{"Limit":10, "ExclusiveStartTableName":"Test"}""")
-      }
+  "create table" should {
+    println("create table")
 
-      "ListTableResponse should be created from json" in {
-        fromJson[ListTablesResponse](parse("""{"TableNames":["Table1","Table2","Table3"], "LastEvaluatedTableName":"Table3"}""")) must beLike {
-          case ListTablesResponse(Seq("Table1", "Table2", "Table3"), Some("Table3")) => ok
-        }
-        fromJson[ListTablesResponse](parse("""{"TableNames":["Table1","Table2","Table3"]}""")) must beLike {
-          case ListTablesResponse(Seq("Table1", "Table2", "Table3"), None) => ok
-        }
+    val createRequest = CreateTableRequest("Test", KeySchema(Attribute("test", S)))
 
-      }
+    "create a Test table" in {
+      println("create Test table")
 
-      "make a successfull request" in {
-        DynamoDb.listTables(ListTablesRequest(Some(10))).value.get must beLike {
-          case Right(ListTablesResponse(Seq("Test"), None)) => ok
-        }
-        DynamoDb(ListTablesRequest(Some(10))).value.get must beLike {
-          case Right(ListTablesResponse(Seq("Test"), None)) => ok
-        }
+      DynamoDb.createTable(createRequest).value.get must beLike {
+        case Right(CreateTableResponse(
+          TableDescription("Test", CREATING, Some(x: Date),
+            Some(KeySchema(Attribute("test", S), None)),
+            ProvisionedThroughput(5, 10, None, None)))) => ok
       }
     }
 
-    "create table" in {
-      "ProvisionedThroughput" in {
-        "should create correct json" in {
-          toJson(ProvisionedThroughPut()) must_== parse("""{"ReadCapacityUnits":10,"WriteCapacityUnits":5}""")
-          toJson(ProvisionedThroughPut(10, 5)) must_== parse("""{"ReadCapacityUnits":5,"WriteCapacityUnits":10}""")
-        }
+    "create a Test2 table" in {
+      println("create Test2 table")
+
+      DynamoDb(CreateTableRequest("Test2", KeySchema(Attribute("string", S), Some(Attribute("number", N))))).value.get must beLike {
+        case Right(CreateTableResponse(
+          TableDescription("Test2", CREATING, Some(x: Date),
+            Some(KeySchema(Attribute("string", S), Some(Attribute("number", N)))),
+            ProvisionedThroughput(5, 10, None, None)))) => ok
       }
-      "Attribute" in {
-        "should throw an assertion exception" >> {
-          Attribute("a" * 256, S) must throwA[IllegalArgumentException]
-          Attribute("", S) must throwA[IllegalArgumentException]
-        }
-        "should create correct json" in {
-          toJson(Attribute("AttributeName1", S)) must_== parse("""{"AttributeName":"AttributeName1","AttributeType":"S"}""")
-        }
+
+    }
+    "return an exception when trying to create the same table" in {
+      println("return an exception when trying to create the same table")
+
+      DynamoDb.createTable(createRequest).value.get must beLike {
+        case Left(ResourceInUseException(_)) => ok
       }
-      "KeySchema" in {
-        "should create correct json" in {
-          toJson(KeySchema(Attribute("AttributeName1", S))) must_== parse("""{"HashKeyElement":{"AttributeName":"AttributeName1","AttributeType":"S"}}""")
-          toJson(KeySchema(Attribute("AttributeName1", S), Some(Attribute("AttributeName2", N)))) must_== parse("""{"HashKeyElement":{"AttributeName":"AttributeName1","AttributeType":"S"},"RangeKeyElement":{"AttributeName":"AttributeName2","AttributeType":"N"}}""")
-        }
+    }
+  }
+
+  "list tables" should {
+    println("list tables")
+
+    "make a successfull request" in {
+      println("list tables actual request")
+
+      DynamoDb.listTables(ListTablesRequest(Some(10))).value.get must beLike {
+        case Right(ListTablesResponse(Seq("Test", "Test2"), None)) => ok
       }
-      "CreateTableRequest" in {
-        "should throw an assertion exception" >> {
-          CreateTableRequest("a", KeySchema(Attribute("key", S)), ProvisionedThroughPut()) must throwA[IllegalArgumentException]
-          CreateTableRequest("a" * 256, KeySchema(Attribute("key", S)), ProvisionedThroughPut()) must throwA[IllegalArgumentException]
-		  CreateTableRequest("a$a", KeySchema(Attribute("key", S)), ProvisionedThroughPut()) must throwA[IllegalArgumentException]
-        }
-        "should create correct json" in {
-          toJson(CreateTableRequest(
-              "Table1", 
-              KeySchema(Attribute("AttributeName1", S), Some(Attribute("AttributeName2", N))),
-              ProvisionedThroughPut(10, 5))) must_== parse("""{"TableName":"Table1", "KeySchema": {"HashKeyElement":{"AttributeName":"AttributeName1","AttributeType":"S"}, "RangeKeyElement":{"AttributeName":"AttributeName2","AttributeType":"N"}}, "ProvisionedThroughput":{"ReadCapacityUnits":5,"WriteCapacityUnits":10}}""")
-        }
+      DynamoDb(ListTablesRequest(Some(10))).value.get must beLike {
+        case Right(ListTablesResponse(Seq("Test", "Test2"), None)) => ok
       }
+
+    }
+  }
+
+  "describe table" should {
+    println("describe table")
+
+    "return information for Test" in {
+      println("information for Test")
+
+      DynamoDb.describeTable(DescribeTableRequest("Test")).value.get must beLike {
+        case Right(DescribeTableResponse(Table("Test", _, _, _, _, _, _))) => ok
+      }
+    }
+     "return information for Test2" in {
+    	  println("information for Test2")
+    	  
+      DynamoDb(DescribeTableRequest("Test2")).value.get must beLike {
+        case Right(DescribeTableResponse(Table("Test2", _, _, _, _, _, _))) => ok
+      }
+
+    }
+  }
+
+  "delete table" should {
+    println("delete table")
+    
+    def deleteTable(name:String): Example = DynamoDb.describeTable(DescribeTableRequest(name)).value.get match {
+        case Right(DescribeTableResponse(Table(_, status, _, _, _, _, _))) => status match {
+          case ACTIVE => {
+            println("found " + name + " active, removing")
+            DynamoDb(DeleteTableRequest(name)).value.get match {
+              case Right(DeleteTableResponse(TableDescription(_, DELETING, _, _, _))) => {
+                println("deleted table " + name)
+                ok
+              }
+              case Left(error) => failure("error calling delete table => " + error.getClass.getName + ": " + error.message)
+              case Right(x) => failure("unexpected response from delete: " + x)
+            }
+          }
+          case _ => {
+            Thread sleep 500
+            println("waiting for table " + name + " to be created")
+            deleteTable(name)
+          }
+        }
+        case Left(ResourceNotFoundException(_)) => {
+          Thread sleep 500
+          println("waiting for table " + name + " to be created")
+          deleteTable(name)
+        }
+        case Left(error) => failure("error calling describe table => " + error.getClass.getName + ": " + error.message)
+      }
+    
+    "wait for Test1 table to be active using describe table and delete the table" in {
+      println("wait for Test1 table to be active using describe table and delete the table")
+
+      deleteTable("Test")
+      ok
+
+    }
+    "wait for Test2 table to be active using describe table and delete the table" in {
+      println("wait for Test2 table to be active using describe table and delete the table")
+
+      deleteTable("Test2")
+      ok
+    }
+  }
+
+  "cleanup" should {
+    println("cleanup")
+    def checkRemoval(name: String): Example = DynamoDb.describeTable(DescribeTableRequest(name)).value.get match {
+      case Right(DescribeTableResponse(Table(_, status, _, _, _, _, _))) => status match {
+        case DELETING => {
+          Thread sleep 500
+          println("waiting for table " + name + " to be removed")
+          checkRemoval(name)
+        }
+        case x => failure("Unexpected status: " + x)
+      }
+      case Left(ResourceNotFoundException(_)) => ok
+      case Left(error) => {
+        failure(error.message)
+      }
+    }
+
+    "wait for table Test to have been deleted" in {
+      println("waiting for table Test to have been deleted")
+      checkRemoval("Test")
+      ok
+    }
+    "wait for table Test2 to have been deleted" in {
+      println("waiting for table Test2 to have been deleted")
+      checkRemoval("Test2")
+      ok
+    }
+  }
+
+  "update table" should {
+    "should have values for last increase or last decrease of throughput" in {
+      todo
     }
   }
 }

@@ -36,9 +36,22 @@ object DynamoDb {
 	  	.url(url)
 	  	.withHeaders("x-amz-target" -> (version + action))
 	  	.post(toJson(body))
-	  	.map(response[ListTablesResponse])
+	  	.map(converter)
 	
 	/** @see http://docs.amazonwebservices.com/amazondynamodb/latest/developerguide/API_ListTables.html */
 	def listTables(request:ListTablesRequest)(implicit credentials:AwsCredentials) = post("ListTables", request, response[ListTablesResponse])
 	def apply(request:ListTablesRequest)(implicit credentials:AwsCredentials) = listTables(request)
+	
+	/** @see http://docs.amazonwebservices.com/amazondynamodb/latest/developerguide/API_CreateTable.html */
+	def createTable(request:CreateTableRequest)(implicit credentials:AwsCredentials) = post("CreateTable", request, response[CreateTableResponse])
+	def apply(request:CreateTableRequest)(implicit credentials:AwsCredentials) = createTable(request)
+	
+	/** @see http://docs.amazonwebservices.com/amazondynamodb/latest/developerguide/API_DeleteTable.html */
+	def deleteTable(request:DeleteTableRequest)(implicit credentials:AwsCredentials) = post("DeleteTable", request, response[DeleteTableResponse])
+	def apply(request:DeleteTableRequest)(implicit credentials:AwsCredentials) = deleteTable(request)
+	
+	/** @see http://docs.amazonwebservices.com/amazondynamodb/latest/developerguide/API_DescribeTables.html */
+	def describeTable(request:DescribeTableRequest)(implicit credentials:AwsCredentials) = post("DescribeTable", request, response[DescribeTableResponse])
+	def apply(request:DescribeTableRequest)(implicit credentials:AwsCredentials) = describeTable(request)
+	
 }
