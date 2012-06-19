@@ -96,3 +96,25 @@ object DescribeTableResponse extends (Table => DescribeTableResponse) {
     def reads(j:JsValue) = DescribeTableResponse((j \ "Table").as[Table])
   }
 }
+
+/*
+ * UPDATE TABLE
+ */
+
+case class UpdateTableRequest(name:String, provisionedThroughput:ProvisionedThroughput)
+
+object UpdateTableRequest extends ((String, ProvisionedThroughput) => UpdateTableRequest) {
+  implicit object UpdateTableRequestWrites extends Writes[UpdateTableRequest] {
+    def writes(r:UpdateTableRequest):JsValue = JsObject(Seq(
+        "TableName" -> toJson(r.name),
+        "ProvisionedThroughput" -> toJson(r.provisionedThroughput)))
+  }
+}
+
+case class UpdateTableResponse(tableDescription:TableDescription)
+
+object UpdateTableResponse extends (TableDescription => UpdateTableResponse) {
+  implicit object UpdateTableResponseReads extends Reads[UpdateTableResponse] {
+    def reads(j:JsValue) = UpdateTableResponse((j \ "TableDescription").as[TableDescription])
+  }
+}

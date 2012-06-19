@@ -27,13 +27,13 @@ object RequestResponseModelsSpec extends Specification {
 
   }
 
-  "CreateTableRequest" in {
-    "should throw an assertion exception" >> {
+  "CreateTableRequest" should {
+    "throw an assertion exception" >> {
       CreateTableRequest("a", KeySchema(Attribute("key", S)), ProvisionedThroughput()) must throwA[IllegalArgumentException]
       CreateTableRequest("a" * 256, KeySchema(Attribute("key", S)), ProvisionedThroughput()) must throwA[IllegalArgumentException]
       CreateTableRequest("a$a", KeySchema(Attribute("key", S)), ProvisionedThroughput()) must throwA[IllegalArgumentException]
     }
-    "should create correct json" in {
+    "create correct json" in {
       toJson(CreateTableRequest(
         "Table1",
         KeySchema(Attribute("AttributeName1", S), Some(Attribute("AttributeName2", N))),
@@ -64,6 +64,16 @@ object RequestResponseModelsSpec extends Specification {
   "DescribeTableResponse should be created from json" in {
     fromJson[DescribeTableResponse](parse("""{"Table":{"CreationDateTime":1.309988345372E9,"ItemCount":1,"KeySchema":{"HashKeyElement":{"AttributeName":"AttributeName1","AttributeType":"S"},"RangeKeyElement":{"AttributeName":"AttributeName2","AttributeType":"N"}},"ProvisionedThroughput":{"LastIncreaseDateTime": 1.309988345372E9, "LastDecreaseDateTime": 1.309988345372E9, "ReadCapacityUnits":10,"WriteCapacityUnits":10},"TableName":"Table1","TableSizeBytes":1,"TableStatus":"ACTIVE"}}""")) must beLike {
       case DescribeTableResponse(x: Table) => ok
+    }
+  }
+
+  "UpdateTableRequest should create correct json" in {
+    toJson(UpdateTableRequest("Table1", ProvisionedThroughput(15, 5))) must_== parse("""{"TableName":"Table1","ProvisionedThroughput":{"ReadCapacityUnits":5,"WriteCapacityUnits":15}}""")
+  }
+
+  "UpdateTableResponse should be created from json" in {
+    fromJson[UpdateTableResponse](parse("""{"TableDescription":{"CreationDateTime":1.321657838135E9,"KeySchema":{"HashKeyElement":{"AttributeName":"AttributeValue1","AttributeType":"S"},"RangeKeyElement":{"AttributeName":"AttributeValue2","AttributeType":"N"}},"ProvisionedThroughput":{"LastDecreaseDateTime":1.321661704489E9,"LastIncreaseDateTime":1.321663607695E9,"ReadCapacityUnits":5,"WriteCapacityUnits":10},"TableName":"Table1","TableStatus":"UPDATING"}}""")) must beLike {
+      case UpdateTableResponse(x: TableDescription) => ok
     }
   }
 }

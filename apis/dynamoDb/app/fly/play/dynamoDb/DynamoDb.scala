@@ -54,4 +54,8 @@ object DynamoDb {
 	def describeTable(request:DescribeTableRequest)(implicit credentials:AwsCredentials) = post("DescribeTable", request, response[DescribeTableResponse])
 	def apply(request:DescribeTableRequest)(implicit credentials:AwsCredentials) = describeTable(request)
 	
+	/** @see http://docs.amazonwebservices.com/amazondynamodb/latest/developerguide/API_UpdateTable.html */
+	def updateTable(request:UpdateTableRequest)(implicit credentials:AwsCredentials) = post("UpdateTable", request, response[UpdateTableResponse])
+	def apply(request:UpdateTableRequest)(implicit credentials:AwsCredentials) = updateTable(request)
+	
 }
