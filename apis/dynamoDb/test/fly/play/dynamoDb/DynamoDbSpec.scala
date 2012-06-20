@@ -10,11 +10,12 @@ import java.util.Date
 import org.specs2.specification.Example
 
 object DynamoDbSpec extends Specification with Before {
+  
   sequential
 
   def f = FakeApplication(new java.io.File("./test/"))
   def before = play.api.Play.start(f)
-
+/*
   def waitForStatus(name: String, status: TableStatus, example: => Example): Example = DynamoDb.describeTable(DescribeTableRequest(name)).value.get match {
     case Right(DescribeTableResponse(Table(_, status, _, _, _, _, _))) if (status == ACTIVE) =>
       println("found " + name + " in " + status + " state, performing action")
@@ -174,4 +175,5 @@ object DynamoDbSpec extends Specification with Before {
       ok
     }
   }
+  */
 }

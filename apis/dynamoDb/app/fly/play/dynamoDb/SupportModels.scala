@@ -3,6 +3,8 @@ package fly.play.dynamoDb
 import play.api.libs.json.Json.{ toJson }
 import play.api.libs.json.{ JsValue, Reads, Writes, JsObject, Format }
 import java.util.Date
+import play.api.libs.json.JsArray
+import play.api.libs.json.JsString
 
 trait JsonUtils {
   def key[T](name: String)(value: T)(implicit wrt: Writes[T]): (String, JsValue) =
@@ -31,20 +33,32 @@ object ProvisionedThroughput extends ((Int, Int, Option[Date], Option[Date]) => 
   }
 }
 
-sealed abstract class AttributeType(val value: String)
+sealed trait AttributeType {
+  def value: String
+}
 
 object AttributeType {
-  implicit object AttributeTypetatusReads extends Reads[AttributeType] {
-    def reads(json: JsValue) = json.as[String] match {
-      case "S" => S
-      case "N" => N
-      case _ => throw new Exception("Could not create TableStatus from '" + json + "'")
-    }
+  implicit object AttributeTypetatusFormat extends Format[AttributeType] {
+    def reads(json: JsValue) = AttributeType(json.as[String])
+    def writes(a: AttributeType): JsValue = toJson(a.value)
+  }
+
+  def apply(value: String) = value match {
+    case "S" => S
+    case "N" => N
+    case "NS" => NS
+    case "SS" => SS
+    case _ => throw new Exception("Could not create TableStatus from '" + value + "'")
   }
 }
 
-case object S extends AttributeType("S")
-case object N extends AttributeType("N")
+abstract class SimpleAttributeType(val value: String) extends AttributeType
+abstract class SeqAttributeType(val value: String) extends AttributeType
+
+case object S extends SimpleAttributeType("S")
+case object N extends SimpleAttributeType("N")
+case object NS extends SeqAttributeType("NS")
+case object SS extends SeqAttributeType("SS")
 
 sealed abstract class TableStatus(val value: String)
 
@@ -74,7 +88,7 @@ object Attribute extends ((String, AttributeType) => Attribute) {
   implicit object AttributeFormat extends Format[Attribute] {
     def writes(a: Attribute): JsValue = JsObject(Seq(
       "AttributeName" -> toJson(a.name),
-      "AttributeType" -> toJson(a.tpe.value)))
+      "AttributeType" -> toJson(a.tpe)))
 
     def reads(json: JsValue) = Attribute(
       (json \ "AttributeName").as[String],
@@ -124,3 +138,73 @@ object Table extends ((String, TableStatus, Option[Date], Option[Long], Option[I
       (json \ "ProvisionedThroughput").as[ProvisionedThroughput])
   }
 }
+
+sealed trait AttributeValue {
+  type ValueType
+
+  def tpe: AttributeType
+  def value: ValueType
+}
+
+object AttributeValue {
+
+  implicit object AttributeValueFormat extends Format[AttributeValue] {
+
+    implicit def mapReads[K, V](implicit fmtk: Reads[K], fmtv: Reads[V]): Reads[collection.immutable.Map[K, V]] = new Reads[collection.immutable.Map[K, V]] {
+      def reads(json: JsValue) = json match {
+        case JsObject(m) => m.map { case (k, v) => JsString(k).as[K] -> v.as[V] }.toMap
+        case _ => throw new RuntimeException("Map expected")
+      }
+    }
+
+    def reads(json: JsValue) = {
+      val attributeFormat = json.as[Map[AttributeType, JsValue]]
+      attributeFormat.head match {
+        case (key: SimpleAttributeType, value: JsString) => AttributeValue(key, value.as[String])
+        case (key: SeqAttributeType, value: JsArray) => AttributeValue(key, value.as[Seq[String]])
+        case _ => throw new Exception("Invalid key - value combination: " + json)
+      }
+    }
+    
+    def writes(a:AttributeValue):JsValue = {
+      
+      val value = a match {
+        case SimpleAttributeValue(_, value) => toJson(value)
+        case SeqAttributeValue(_, value) => toJson(value)
+      }
+      
+      JsObject(Seq(a.tpe.value -> value))
+    } 
+  }
+
+  def apply(tpe: SimpleAttributeType, value: String): AttributeValue = SimpleAttributeValue(tpe, value)
+  def apply(tpe: SeqAttributeType, value: Seq[String]): AttributeValue = SeqAttributeValue(tpe, value)
+  
+}
+
+case class SimpleAttributeValue(tpe: SimpleAttributeType, value: String) extends AttributeValue { type ValueType = String }
+case class SeqAttributeValue(tpe: SeqAttributeType, value: Seq[String]) extends AttributeValue { type ValueType = Seq[String] }
+
+case class AttributeExpectation(exists: Boolean, value: Option[AttributeValue]) {
+  require((exists && value.isDefined) || (!exists && value.isEmpty), "If exists is false, value should be None. If exists is true, value should be Some")
+}
+
+object AttributeExpectation extends ((Boolean, Option[AttributeValue]) => AttributeExpectation) {
+  implicit object AttributeExpectationWrites extends Writes[AttributeExpectation] with JsonUtils {
+    def writes(a:AttributeExpectation):JsValue = JsObject(List(
+    		"Exists" -> toJson(a.exists)) ::: 
+    		optional("Value", a.value)
+    )
+  }
+}
+
+sealed abstract class ReturnValuesType(val value: String)
+
+object ReturnValuesType {
+  implicit object ReturnValuesTypeWrites extends Writes[ReturnValuesType] {
+    def writes(r:ReturnValuesType):JsValue = JsString(r.value) 
+  }
+}
+
+case object NONE extends ReturnValuesType("NONE")
+case object ALL_OLD extends ReturnValuesType("ALL_OLD")

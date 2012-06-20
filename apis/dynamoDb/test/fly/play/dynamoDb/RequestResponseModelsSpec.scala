@@ -50,7 +50,7 @@ object RequestResponseModelsSpec extends Specification {
   "DeleteTableRequest should create correct json" in {
     toJson(DeleteTableRequest("Table1")) must_== parse("""{"TableName":"Table1"}""")
   }
-
+  
   "DeleteTableResponse should be created from json" in {
     fromJson[DeleteTableResponse](parse("""{"TableDescription":{"CreationDateTime":1.313362508446E9,"KeySchema":{"HashKeyElement":{"AttributeName":"user","AttributeType":"S"},"RangeKeyElement":{"AttributeName":"time","AttributeType":"N"}},"ProvisionedThroughput":{"ReadCapacityUnits":10,"WriteCapacityUnits":10},"TableName":"Table1","TableStatus":"DELETING"}}""")) must beLike {
       case DeleteTableResponse(x: TableDescription) => ok
@@ -76,4 +76,13 @@ object RequestResponseModelsSpec extends Specification {
       case UpdateTableResponse(x: TableDescription) => ok
     }
   }
+  
+  "PutItemRequest should create correct json" in {
+    toJson(
+        PutItemRequest("Table1", 
+            Map("AttributeName1" -> AttributeValue(S, "AttributeValue1"),
+                "AttributeName2" -> AttributeValue(N, "AttributeValue2")), 
+            Map("AttributeName3" -> AttributeExpectation(true, Some(AttributeValue(S, "AttributeValue")))), 
+                ALL_OLD)) must_== parse("""{"TableName":"Table1","Item":{"AttributeName1":{"S":"AttributeValue1"},"AttributeName2":{"N":"AttributeValue2"}},"Expected":{"AttributeName3":{"Exists":true,"Value": {"S":"AttributeValue"}}},"ReturnValues":"ALL_OLD"}""")
+  }  
 }

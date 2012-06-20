@@ -118,3 +118,20 @@ object UpdateTableResponse extends (TableDescription => UpdateTableResponse) {
     def reads(j:JsValue) = UpdateTableResponse((j \ "TableDescription").as[TableDescription])
   }
 }
+
+/*
+ * PUT ITEM
+ */
+
+case class PutItemRequest(tableName:String, item:Map[String, AttributeValue], expected:Map[String, AttributeExpectation], returnValues:ReturnValuesType)
+
+object PutItemRequest extends ((String, Map[String, AttributeValue], Map[String, AttributeExpectation], ReturnValuesType) => PutItemRequest) {
+  implicit object PutItemRequestWrites extends Writes[PutItemRequest] {
+    def writes(r:PutItemRequest):JsValue = JsObject(Seq(
+    		"TableName" -> toJson(r.tableName),
+    		"Item" -> toJson(r.item),
+    		"Expected" -> toJson(r.expected),
+    		"ReturnValues" -> toJson(r.returnValues)
+    ))
+  }
+}
