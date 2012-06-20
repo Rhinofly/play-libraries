@@ -166,21 +166,21 @@ object AttributeValue {
         case _ => throw new Exception("Invalid key - value combination: " + json)
       }
     }
-    
-    def writes(a:AttributeValue):JsValue = {
-      
+
+    def writes(a: AttributeValue): JsValue = {
+
       val value = a match {
         case SimpleAttributeValue(_, value) => toJson(value)
         case SeqAttributeValue(_, value) => toJson(value)
       }
-      
+
       JsObject(Seq(a.tpe.value -> value))
-    } 
+    }
   }
 
   def apply(tpe: SimpleAttributeType, value: String): AttributeValue = SimpleAttributeValue(tpe, value)
   def apply(tpe: SeqAttributeType, value: Seq[String]): AttributeValue = SeqAttributeValue(tpe, value)
-  
+
 }
 
 case class SimpleAttributeValue(tpe: SimpleAttributeType, value: String) extends AttributeValue { type ValueType = String }
@@ -192,10 +192,9 @@ case class AttributeExpectation(exists: Boolean, value: Option[AttributeValue] =
 
 object AttributeExpectation extends ((Boolean, Option[AttributeValue]) => AttributeExpectation) {
   implicit object AttributeExpectationWrites extends Writes[AttributeExpectation] with JsonUtils {
-    def writes(a:AttributeExpectation):JsValue = JsObject(List(
-    		"Exists" -> toJson(a.exists)) ::: 
-    		optional("Value", a.value)
-    )
+    def writes(a: AttributeExpectation): JsValue = JsObject(List(
+      "Exists" -> toJson(a.exists)) :::
+      optional("Value", a.value))
   }
 }
 
@@ -203,20 +202,55 @@ sealed abstract class ReturnValuesType(val value: String)
 
 object ReturnValuesType {
   implicit object ReturnValuesTypeWrites extends Writes[ReturnValuesType] {
-    def writes(r:ReturnValuesType):JsValue = JsString(r.value) 
+    def writes(r: ReturnValuesType): JsValue = JsString(r.value)
   }
 }
 
 case object NONE extends ReturnValuesType("NONE")
 case object ALL_OLD extends ReturnValuesType("ALL_OLD")
+case object ALL_NEW extends ReturnValuesType("ALL_NEW")
+case object UPDATED_OLD extends ReturnValuesType("UPDATED_OLD")
+case object UPDATED_NEW extends ReturnValuesType("UPDATED_NEW")
 
-case class Key(hashKeyElement:AttributeValue, rangeKeyElement:Option[AttributeValue] = None)
+case class Key(hashKeyElement: AttributeValue, rangeKeyElement: Option[AttributeValue] = None)
 
 object Key extends ((AttributeValue, Option[AttributeValue]) => Key) {
   implicit object KeyWrites extends Writes[Key] with JsonUtils {
-    def writes(k:Key):JsValue = JsObject(List(
-        "HashKeyElement" -> toJson(k.hashKeyElement)) :::
-        optional("RangeKeyElement", k.rangeKeyElement))
-    
+    def writes(k: Key): JsValue = JsObject(List(
+      "HashKeyElement" -> toJson(k.hashKeyElement)) :::
+      optional("RangeKeyElement", k.rangeKeyElement))
+
+  }
+}
+
+sealed abstract class AttributeUpdateAction(val value: String)
+
+object AttributeUpdateAction {
+  implicit object AttributeUpdateActionWrites extends Writes[AttributeUpdateAction] {
+    def writes(a: AttributeUpdateAction): JsValue = JsString(a.value)
+  }
+}
+
+case object PUT extends AttributeUpdateAction("PUT")
+case object DELETE extends AttributeUpdateAction("DELETE")
+case object ADD extends AttributeUpdateAction("ADD")
+
+case class AttributeUpdate(value: AttributeValue, action: AttributeUpdateAction = PUT) {
+  require(action != DELETE || (value match {
+    case SeqAttributeValue(_, value) if value.size > 0 => true
+    case _ => false
+  }), "Delete action only works when providing a seq type attribute that is not empty")
+
+  require(action != ADD || (value match {
+    case SimpleAttributeValue(S, _) => false
+    case _ => true
+  }), "Add action does not work for simple string type attributes")
+}
+
+object AttributeUpdate extends ((AttributeValue, AttributeUpdateAction) => AttributeUpdate) {
+  implicit object AttributeUpdateWrites extends Writes[AttributeUpdate] {
+    def writes(a: AttributeUpdate): JsValue = JsObject(Seq(
+      "Value" -> toJson(a.value),
+      "Action" -> toJson(a.action)))
   }
 }

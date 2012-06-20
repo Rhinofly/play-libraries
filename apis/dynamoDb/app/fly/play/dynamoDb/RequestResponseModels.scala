@@ -123,7 +123,12 @@ object UpdateTableResponse extends (TableDescription => UpdateTableResponse) {
  * PUT ITEM
  */
 
-case class PutItemRequest(tableName:String, item:Map[String, AttributeValue], returnValues:ReturnValuesType = NONE, expected:Option[Map[String, AttributeExpectation]] = None)
+case class PutItemRequest(tableName:String, item:Map[String, AttributeValue], returnValues:ReturnValuesType = NONE, expected:Option[Map[String, AttributeExpectation]] = None) {
+   require(returnValues match {
+    case NONE | ALL_OLD => true
+    case _ => false
+  }, "Put item only supports NONE and ALL_OLD as return values")
+}
 
 object PutItemRequest extends ((String, Map[String, AttributeValue], ReturnValuesType, Option[Map[String, AttributeExpectation]]) => PutItemRequest) {
   implicit object PutItemRequestWrites extends Writes[PutItemRequest] with JsonUtils {
@@ -150,7 +155,12 @@ object PutItemResponse extends ((Map[String, AttributeValue], Double) => PutItem
 /*
  * DELETE ITEM
  */
-case class DeleteItemRequest(tableName:String, key:Key, returnValues:ReturnValuesType = NONE, expected:Option[Map[String, AttributeExpectation]] = None)
+case class DeleteItemRequest(tableName:String, key:Key, returnValues:ReturnValuesType = NONE, expected:Option[Map[String, AttributeExpectation]] = None) {
+  require(returnValues match {
+    case NONE | ALL_OLD => true
+    case _ => false
+  }, "Delete item only supports NONE and ALL_OLD as return values")
+}
 
 object DeleteItemRequest extends ((String, Key, ReturnValuesType, Option[Map[String, AttributeExpectation]]) => DeleteItemRequest) {
   implicit object DeleteItemRequestWrites extends Writes[DeleteItemRequest] with JsonUtils {
@@ -167,6 +177,35 @@ case class DeleteItemResponse(attributes:Map[String, AttributeValue], consumedCa
 object DeleteItemResponse extends ((Map[String, AttributeValue], Double) => DeleteItemResponse) {
   implicit object DeleteItemResponseReads extends Reads[DeleteItemResponse] {
     def reads(json:JsValue) = DeleteItemResponse(
+    		(json \ "Attributes").as[Map[String, AttributeValue]],
+    		(json \ "ConsumedCapacityUnits").as[Double]
+    )
+  }
+}
+
+/*
+ * UPDATE ITEM
+ */
+
+case class UpdateItemRequest(tableName:String, key:Key, attributeUpdates:Map[String, AttributeUpdate], returnValues:ReturnValuesType = NONE, expected:Option[Map[String, AttributeExpectation]] = None)
+
+object UpdateItemRequest extends ((String, Key, Map[String, AttributeUpdate], ReturnValuesType, Option[Map[String, AttributeExpectation]]) => UpdateItemRequest) {
+  implicit object UpdateItemRequestWrites extends Writes[UpdateItemRequest] with JsonUtils {
+    def writes(r:UpdateItemRequest):JsValue = JsObject(List(
+    		"TableName" -> toJson(r.tableName),
+    		"Key" -> toJson(r.key),
+    		"AttributeUpdates" -> toJson(r.attributeUpdates),
+    		"ReturnValues" -> toJson(r.returnValues)) :::
+    		optional("Expected", r.expected)
+    )
+  }
+}
+
+case class UpdateItemResponse(attributes:Map[String, AttributeValue], consumedCapacityUnits:Double)
+
+object UpdateItemResponse extends ((Map[String, AttributeValue], Double) => UpdateItemResponse) {
+  implicit object UpdateItemResponseReads extends Reads[UpdateItemResponse] {
+    def reads(json:JsValue) = UpdateItemResponse(
     		(json \ "Attributes").as[Map[String, AttributeValue]],
     		(json \ "ConsumedCapacityUnits").as[Double]
     )

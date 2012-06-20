@@ -105,4 +105,14 @@ object SupportModelsSpec extends Specification {
       toJson(Key(AttributeValue(S, "AttributeValue1"), Some(AttributeValue(N, "AttributeValue2")))) must_== parse("""{"HashKeyElement":{"S":"AttributeValue1"},"RangeKeyElement":{"N":"AttributeValue2"}}""")
     }
   }
+  
+  "AttributeUpdate" should {
+    "throw an assertion exception" >> {
+      AttributeUpdate(AttributeValue(SS, Seq.empty), DELETE) must throwA[IllegalArgumentException]
+      AttributeUpdate(AttributeValue(S, ""), ADD) must throwA[IllegalArgumentException]
+    }
+    "create correct json" in {
+      toJson(AttributeUpdate(AttributeValue(N, "10"), ADD)) must_== parse("""{"Value":{"N":"10"},"Action":"ADD"}""")
+    }
+  }
 }

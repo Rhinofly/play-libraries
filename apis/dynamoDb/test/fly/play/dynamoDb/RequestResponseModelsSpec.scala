@@ -77,17 +77,25 @@ object RequestResponseModelsSpec extends Specification {
     }
   }
 
-  "PutItemRequest should create correct json" >> {
-    toJson(
+  "PutItemRequest" should {
+    "throw an assertion exception" in {
       PutItemRequest("Table1",
         Map("AttributeName1" -> AttributeValue(S, "AttributeValue1"),
           "AttributeName2" -> AttributeValue(N, "AttributeValue2")),
-        ALL_OLD,
-        Some(Map("AttributeName3" -> AttributeExpectation(true, Some(AttributeValue(S, "AttributeValue"))))))) must_== parse("""{"TableName":"Table1","Item":{"AttributeName1":{"S":"AttributeValue1"},"AttributeName2":{"N":"AttributeValue2"}},"ReturnValues":"ALL_OLD","Expected":{"AttributeName3":{"Exists":true,"Value": {"S":"AttributeValue"}}}}""")
-    toJson(
-      PutItemRequest("Table1",
-        Map("AttributeName1" -> AttributeValue(S, "AttributeValue1"),
-          "AttributeName2" -> AttributeValue(N, "AttributeValue2")))) must_== parse("""{"TableName":"Table1","Item":{"AttributeName1":{"S":"AttributeValue1"},"AttributeName2":{"N":"AttributeValue2"}},"ReturnValues":"NONE"}""")
+        ALL_NEW) must throwA[IllegalArgumentException]
+    }
+    "create correct json" >> {
+      toJson(
+        PutItemRequest("Table1",
+          Map("AttributeName1" -> AttributeValue(S, "AttributeValue1"),
+            "AttributeName2" -> AttributeValue(N, "AttributeValue2")),
+          ALL_OLD,
+          Some(Map("AttributeName3" -> AttributeExpectation(true, Some(AttributeValue(S, "AttributeValue"))))))) must_== parse("""{"TableName":"Table1","Item":{"AttributeName1":{"S":"AttributeValue1"},"AttributeName2":{"N":"AttributeValue2"}},"ReturnValues":"ALL_OLD","Expected":{"AttributeName3":{"Exists":true,"Value": {"S":"AttributeValue"}}}}""")
+      toJson(
+        PutItemRequest("Table1",
+          Map("AttributeName1" -> AttributeValue(S, "AttributeValue1"),
+            "AttributeName2" -> AttributeValue(N, "AttributeValue2")))) must_== parse("""{"TableName":"Table1","Item":{"AttributeName1":{"S":"AttributeValue1"},"AttributeName2":{"N":"AttributeValue2"}},"ReturnValues":"NONE"}""")
+    }
   }
 
   "PutItemResponse should be created from json" in {
@@ -96,20 +104,42 @@ object RequestResponseModelsSpec extends Specification {
     }
   }
 
-  "DeleteItemRequest should create correct json" >> {
-    toJson(
+  "DeleteItemRequest" should {
+    "throw an assertion exception" in {
       DeleteItemRequest("Table1",
         Key(AttributeValue(S, "AttributeValue1"), Some(AttributeValue(N, "AttributeValue2"))),
-        ALL_OLD,
-        Some(Map("AttributeName3" -> AttributeExpectation(true, Some(AttributeValue(S, "AttributeValue3"))))))) must_== parse("""{"TableName":"Table1","Key":{"HashKeyElement":{"S":"AttributeValue1"},"RangeKeyElement":{"N":"AttributeValue2"}},"ReturnValues":"ALL_OLD","Expected":{"AttributeName3":{"Exists":true, "Value":{"S":"AttributeValue3"}}}}""")
-    toJson(
-      DeleteItemRequest("Table1",
-        Key(AttributeValue(S, "AttributeValue1"), Some(AttributeValue(N, "AttributeValue2"))))) must_== parse("""{"TableName":"Table1","Key":{"HashKeyElement":{"S":"AttributeValue1"},"RangeKeyElement":{"N":"AttributeValue2"}},"ReturnValues":"NONE"}""")
+        ALL_NEW) must throwA[IllegalArgumentException]
+    }
+    "create correct json" >> {
+      toJson(
+        DeleteItemRequest("Table1",
+          Key(AttributeValue(S, "AttributeValue1"), Some(AttributeValue(N, "AttributeValue2"))),
+          ALL_OLD,
+          Some(Map("AttributeName3" -> AttributeExpectation(true, Some(AttributeValue(S, "AttributeValue3"))))))) must_== parse("""{"TableName":"Table1","Key":{"HashKeyElement":{"S":"AttributeValue1"},"RangeKeyElement":{"N":"AttributeValue2"}},"ReturnValues":"ALL_OLD","Expected":{"AttributeName3":{"Exists":true, "Value":{"S":"AttributeValue3"}}}}""")
+      toJson(
+        DeleteItemRequest("Table1",
+          Key(AttributeValue(S, "AttributeValue1"), Some(AttributeValue(N, "AttributeValue2"))))) must_== parse("""{"TableName":"Table1","Key":{"HashKeyElement":{"S":"AttributeValue1"},"RangeKeyElement":{"N":"AttributeValue2"}},"ReturnValues":"NONE"}""")
+    }
   }
-  
+
   "DeleteItemResponse should be created from json" in {
     fromJson[DeleteItemResponse](parse("""{"Attributes":{"AttributeName3":{"S":"AttributeValue3"},"AttributeName2":{"SS":["AttributeValue2"]},"AttributeName1":{"SS":["AttributeValue1"]}},"ConsumedCapacityUnits":1}""")) must beLike {
       case DeleteItemResponse(x: Map[_, _], 1) => ok
+    }
+  }
+  
+  "UpdateItemRequest should create correct json" in {
+    toJson(
+    		UpdateItemRequest("Table1", 
+    		    Key(AttributeValue(S, "AttributeValue1"), Some(AttributeValue(N, "AttributeValue2"))),
+    		    Map("AttributeName3" -> AttributeUpdate(AttributeValue(S, "AttributeValue3_New"))),
+    		    UPDATED_NEW,
+    		    Some(Map("AttributeName3" -> AttributeExpectation(true, Some(AttributeValue(S, "AttributeValue3_Current"))))))) must_== parse("""{"TableName":"Table1","Key":{"HashKeyElement":{"S":"AttributeValue1"},"RangeKeyElement":{"N":"AttributeValue2"}},"AttributeUpdates":{"AttributeName3":{"Value":{"S":"AttributeValue3_New"},"Action":"PUT"}},"ReturnValues":"UPDATED_NEW","Expected":{"AttributeName3":{"Exists":true,"Value":{"S":"AttributeValue3_Current"}}}}""")
+  }
+  
+  "UpdateItemResponse should be created from json" in {
+    fromJson[UpdateItemResponse](parse("""{"Attributes":{"AttributeName1":{"S":"AttributeValue1"},"AttributeName2":{"S":"AttributeValue2"},"AttributeName3":{"S":"AttributeValue3"}},"ConsumedCapacityUnits":1}""")) must beLike {
+      case UpdateItemResponse(x:Map[_, _], 1) => ok
     }
   }
 }

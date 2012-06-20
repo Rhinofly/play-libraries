@@ -43,11 +43,20 @@ object DynamoDbItemSpec extends Specification with Before {
     }
   }
   
-  "delete item" should {
-    "delete an item" in {
-      DynamoDb(DeleteItemRequest("TestTable1", Key(AttributeValue(S, "elem1")), ALL_OLD)).value.get must beLike {
-        case Right(Some(DeleteItemResponse(x:Map[_, _], _))) if (x == Map("id" -> AttributeValue(S, "elem1"), "attribute1" -> AttributeValue(S, "value3"))) => ok
+  "update item" should {
+    "update an item" in {
+      DynamoDb(UpdateItemRequest("TestTable1", Key(AttributeValue(S, "elem1")), Map("attribute1" -> AttributeUpdate(AttributeValue(S, "value4")), "attribute2" -> AttributeUpdate(AttributeValue(N, "3"), ADD)), ALL_NEW)).value.get must beLike {
+        case Right(Some(UpdateItemResponse(x:Map[_, _], _))) if (x == Map("id" -> AttributeValue(S, "elem1"), "attribute1" -> AttributeValue(S, "value4"), "attribute2" -> AttributeValue(N, "3"))) => ok
       }
     }
   }
+  
+  "delete item" should {
+    "delete an item" in {
+      DynamoDb(DeleteItemRequest("TestTable1", Key(AttributeValue(S, "elem1")), ALL_OLD)).value.get must beLike {
+        case Right(Some(DeleteItemResponse(x:Map[_, _], _))) if (x == Map("id" -> AttributeValue(S, "elem1"), "attribute1" -> AttributeValue(S, "value4"), "attribute2" -> AttributeValue(N, "3"))) => ok
+      }
+    }
+  }
+  
 }
