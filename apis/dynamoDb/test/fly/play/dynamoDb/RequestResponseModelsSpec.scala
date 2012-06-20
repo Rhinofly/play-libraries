@@ -85,4 +85,10 @@ object RequestResponseModelsSpec extends Specification {
             Map("AttributeName3" -> AttributeExpectation(true, Some(AttributeValue(S, "AttributeValue")))), 
                 ALL_OLD)) must_== parse("""{"TableName":"Table1","Item":{"AttributeName1":{"S":"AttributeValue1"},"AttributeName2":{"N":"AttributeValue2"}},"Expected":{"AttributeName3":{"Exists":true,"Value": {"S":"AttributeValue"}}},"ReturnValues":"ALL_OLD"}""")
   }  
+  
+  "PutItemResponse should be created from json" in {
+    fromJson[PutItemResponse](parse("""{"Attributes":{"AttributeName3":{"S":"AttributeValue3"},"AttributeName2":{"SS":["AttributeValue2"]},"AttributeName1":{"SS":["AttributeValue1"]}},"ConsumedCapacityUnits":1}""")) must beLike {
+      case PutItemResponse(x:Map[_, _], 1) => ok
+    }
+  }
 }

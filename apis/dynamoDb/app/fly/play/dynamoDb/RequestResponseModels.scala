@@ -135,3 +135,14 @@ object PutItemRequest extends ((String, Map[String, AttributeValue], Map[String,
     ))
   }
 }
+
+case class PutItemResponse(attributes:Map[String, AttributeValue], consumedCapacityUnits:Double)
+
+object PutItemResponse extends ((Map[String, AttributeValue], Double) => PutItemResponse) {
+  implicit object PutItemResponseReads extends Reads[PutItemResponse] {
+    def reads(json:JsValue) = PutItemResponse(
+    		(json \ "Attributes").as[Map[String, AttributeValue]],
+    		(json \ "ConsumedCapacityUnits").as[Double]
+    )
+  }
+}
