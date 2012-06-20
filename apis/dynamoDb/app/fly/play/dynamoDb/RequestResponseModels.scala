@@ -123,16 +123,16 @@ object UpdateTableResponse extends (TableDescription => UpdateTableResponse) {
  * PUT ITEM
  */
 
-case class PutItemRequest(tableName:String, item:Map[String, AttributeValue], expected:Map[String, AttributeExpectation], returnValues:ReturnValuesType)
+case class PutItemRequest(tableName:String, item:Map[String, AttributeValue], returnValues:ReturnValuesType = NONE, expected:Option[Map[String, AttributeExpectation]] = None)
 
-object PutItemRequest extends ((String, Map[String, AttributeValue], Map[String, AttributeExpectation], ReturnValuesType) => PutItemRequest) {
-  implicit object PutItemRequestWrites extends Writes[PutItemRequest] {
-    def writes(r:PutItemRequest):JsValue = JsObject(Seq(
+object PutItemRequest extends ((String, Map[String, AttributeValue], ReturnValuesType, Option[Map[String, AttributeExpectation]]) => PutItemRequest) {
+  implicit object PutItemRequestWrites extends Writes[PutItemRequest] with JsonUtils {
+    def writes(r:PutItemRequest):JsValue = JsObject(List(
     		"TableName" -> toJson(r.tableName),
     		"Item" -> toJson(r.item),
-    		"Expected" -> toJson(r.expected),
-    		"ReturnValues" -> toJson(r.returnValues)
-    ))
+    		"ReturnValues" -> toJson(r.returnValues)) :::
+    		optional("Expected", r.expected)
+    )
   }
 }
 

@@ -77,13 +77,17 @@ object RequestResponseModelsSpec extends Specification {
     }
   }
   
-  "PutItemRequest should create correct json" in {
+  "PutItemRequest should create correct json" >> {
     toJson(
         PutItemRequest("Table1", 
             Map("AttributeName1" -> AttributeValue(S, "AttributeValue1"),
                 "AttributeName2" -> AttributeValue(N, "AttributeValue2")), 
-            Map("AttributeName3" -> AttributeExpectation(true, Some(AttributeValue(S, "AttributeValue")))), 
-                ALL_OLD)) must_== parse("""{"TableName":"Table1","Item":{"AttributeName1":{"S":"AttributeValue1"},"AttributeName2":{"N":"AttributeValue2"}},"Expected":{"AttributeName3":{"Exists":true,"Value": {"S":"AttributeValue"}}},"ReturnValues":"ALL_OLD"}""")
+                ALL_OLD,
+                Some(Map("AttributeName3" -> AttributeExpectation(true, Some(AttributeValue(S, "AttributeValue"))))))) must_== parse("""{"TableName":"Table1","Item":{"AttributeName1":{"S":"AttributeValue1"},"AttributeName2":{"N":"AttributeValue2"}},"ReturnValues":"ALL_OLD","Expected":{"AttributeName3":{"Exists":true,"Value": {"S":"AttributeValue"}}}}""")
+    toJson(
+    		PutItemRequest("Table1", 
+    				Map("AttributeName1" -> AttributeValue(S, "AttributeValue1"),
+    						"AttributeName2" -> AttributeValue(N, "AttributeValue2")))) must_== parse("""{"TableName":"Table1","Item":{"AttributeName1":{"S":"AttributeValue1"},"AttributeName2":{"N":"AttributeValue2"}},"ReturnValues":"NONE"}""")
   }  
   
   "PutItemResponse should be created from json" in {

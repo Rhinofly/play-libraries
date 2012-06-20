@@ -58,4 +58,7 @@ object DynamoDb {
 	def updateTable(request:UpdateTableRequest)(implicit credentials:AwsCredentials) = post("UpdateTable", request, response[UpdateTableResponse])
 	def apply(request:UpdateTableRequest)(implicit credentials:AwsCredentials) = updateTable(request)
 	
+	/** @see http://docs.amazonwebservices.com/amazondynamodb/latest/developerguide/API_PutItem.html */
+	def putItem(request:PutItemRequest)(implicit credentials:AwsCredentials) = post("PutItem", request, response[Option[PutItemResponse]])
+	def apply(request:PutItemRequest)(implicit credentials:AwsCredentials) = putItem(request)
 }

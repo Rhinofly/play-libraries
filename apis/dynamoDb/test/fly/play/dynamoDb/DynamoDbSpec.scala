@@ -10,12 +10,12 @@ import java.util.Date
 import org.specs2.specification.Example
 
 object DynamoDbSpec extends Specification with Before {
-  
+
   sequential
 
   def f = FakeApplication(new java.io.File("./test/"))
   def before = play.api.Play.start(f)
-/*
+
   def waitForStatus(name: String, status: TableStatus, example: => Example): Example = DynamoDb.describeTable(DescribeTableRequest(name)).value.get match {
     case Right(DescribeTableResponse(Table(_, status, _, _, _, _, _))) if (status == ACTIVE) =>
       println("found " + name + " in " + status + " state, performing action")
@@ -105,17 +105,49 @@ object DynamoDbSpec extends Specification with Before {
   }
 
   "update table" should {
-	println("update table")
-	
+    println("update table")
+
     "wait for table to be active and update the throughput of Test table" in {
       println("update table - wait for table to be active and update the throughput of Test table")
-      
+
       waitForStatus("Test", ACTIVE, {
-    	println("updating table")
+        println("updating table")
         DynamoDb(UpdateTableRequest("Test", ProvisionedThroughput(10, 2))).value.get must beLike {
           case Right(UpdateTableResponse(TableDescription("Test", UPDATING, _, _, ProvisionedThroughput(2, 2, Some(x), Some(y))))) => ok
         }
       })
+      ok
+    }
+  }
+
+  "put item" should {
+    println("put item")
+
+    "wait for table to be active and put an item" in {
+      println("put item - wait for table to be active and put an item")
+
+      waitForStatus("Test", ACTIVE, {
+        println("table active")
+        ok
+      })
+      DynamoDb(PutItemRequest("Test", Map("test" -> AttributeValue(S, "soep"), "test2" -> AttributeValue(S, "kip")))).value.get must beLike {
+        case Right(None) => {
+          println("Got No response")
+          ok
+        }
+      }
+      println("putting item")
+      DynamoDb(PutItemRequest("Test", Map("test" -> AttributeValue(S, "soep"), "test2" -> AttributeValue(S, "kip2")), ALL_OLD)).value.get must beLike {
+        case Right(Some(PutItemResponse(x: Map[String, AttributeValue], _))) if (x == Map("test" -> AttributeValue(S, "soep"), "test2" -> AttributeValue(S, "kip"))) => {
+          println("got response")
+          ok
+        }
+      }
+      println("putting item")
+      DynamoDb(PutItemRequest("Test", Map("test" -> AttributeValue(S, "soep"), "test2" -> AttributeValue(S, "kip3")), ALL_OLD, Some(Map("test2" -> AttributeExpectation(true, Some(AttributeValue(S, "kip2"))))))).value.get must beLike {
+        case Right(Some(PutItemResponse(x: Map[String, AttributeValue], _))) if (x == Map("test" -> AttributeValue(S, "soep"), "test2" -> AttributeValue(S, "kip2"))) => ok
+      }
+
       ok
     }
   }
@@ -175,5 +207,5 @@ object DynamoDbSpec extends Specification with Before {
       ok
     }
   }
-  */
+
 }
