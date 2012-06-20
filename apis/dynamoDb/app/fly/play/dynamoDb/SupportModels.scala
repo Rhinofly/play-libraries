@@ -5,6 +5,7 @@ import play.api.libs.json.{ JsValue, Reads, Writes, JsObject, Format }
 import java.util.Date
 import play.api.libs.json.JsArray
 import play.api.libs.json.JsString
+import play.api.libs.json.JsObject
 
 trait JsonUtils {
   def key[T](name: String)(value: T)(implicit wrt: Writes[T]): (String, JsValue) =
@@ -185,7 +186,7 @@ object AttributeValue {
 case class SimpleAttributeValue(tpe: SimpleAttributeType, value: String) extends AttributeValue { type ValueType = String }
 case class SeqAttributeValue(tpe: SeqAttributeType, value: Seq[String]) extends AttributeValue { type ValueType = Seq[String] }
 
-case class AttributeExpectation(exists: Boolean, value: Option[AttributeValue]) {
+case class AttributeExpectation(exists: Boolean, value: Option[AttributeValue] = None) {
   require((exists && value.isDefined) || (!exists && value.isEmpty), "If exists is false, value should be None. If exists is true, value should be Some")
 }
 
@@ -208,3 +209,14 @@ object ReturnValuesType {
 
 case object NONE extends ReturnValuesType("NONE")
 case object ALL_OLD extends ReturnValuesType("ALL_OLD")
+
+case class Key(hashKeyElement:AttributeValue, rangeKeyElement:Option[AttributeValue] = None)
+
+object Key extends ((AttributeValue, Option[AttributeValue]) => Key) {
+  implicit object KeyWrites extends Writes[Key] with JsonUtils {
+    def writes(k:Key):JsValue = JsObject(List(
+        "HashKeyElement" -> toJson(k.hashKeyElement)) :::
+        optional("RangeKeyElement", k.rangeKeyElement))
+    
+  }
+}

@@ -61,4 +61,8 @@ object DynamoDb {
 	/** @see http://docs.amazonwebservices.com/amazondynamodb/latest/developerguide/API_PutItem.html */
 	def putItem(request:PutItemRequest)(implicit credentials:AwsCredentials) = post("PutItem", request, response[Option[PutItemResponse]])
 	def apply(request:PutItemRequest)(implicit credentials:AwsCredentials) = putItem(request)
+	
+	/** @see http://docs.amazonwebservices.com/amazondynamodb/latest/developerguide/API_DeleteItem.html */
+	def deleteItem(request:DeleteItemRequest)(implicit credentials:AwsCredentials) = post("DeleteItem", request, response[Option[DeleteItemResponse]])
+	def apply(request:DeleteItemRequest)(implicit credentials:AwsCredentials) = deleteItem(request)
 }

@@ -76,7 +76,7 @@ object SupportModelsSpec extends Specification {
       toJson(AttributeValue(S, "AttributeValue1")) must_== parse("""{"S":"AttributeValue1"}""")
       toJson(AttributeValue(SS, Seq("AttributeValue1", "AttributeValue2"))) must_== parse("""{"SS":["AttributeValue1", "AttributeValue2"]}""")
     }
-    
+
     "be created from json" >> {
       fromJson[AttributeValue](parse("""{"S":"AttributeValue1"}""")) must beLike {
         case SimpleAttributeValue(tpe, value) => ok
@@ -86,16 +86,23 @@ object SupportModelsSpec extends Specification {
       }
     }
   }
-  
+
   "AttributeExpectation" should {
     "throw an assertion exception" >> {
       AttributeExpectation(false, Some(AttributeValue(S, "Yellow"))) must throwA[IllegalArgumentException]
       AttributeExpectation(true, None) must throwA[IllegalArgumentException]
-    } 
-    
+    }
+
     "create correct json" >> {
-    	toJson(AttributeExpectation(true, Some(AttributeValue(S, "Yellow")))) must_== parse("""{"Exists":true,"Value":{"S":"Yellow"}}""")
-    	toJson(AttributeExpectation(false, None)) must_== parse("""{"Exists":false}""")
+      toJson(AttributeExpectation(true, Some(AttributeValue(S, "Yellow")))) must_== parse("""{"Exists":true,"Value":{"S":"Yellow"}}""")
+      toJson(AttributeExpectation(false)) must_== parse("""{"Exists":false}""")
+    }
+  }
+
+  "Key" should {
+    "create correct json" >> {
+      toJson(Key(AttributeValue(S, "AttributeValue1"))) must_== parse("""{"HashKeyElement":{"S":"AttributeValue1"}}""")
+      toJson(Key(AttributeValue(S, "AttributeValue1"), Some(AttributeValue(N, "AttributeValue2")))) must_== parse("""{"HashKeyElement":{"S":"AttributeValue1"},"RangeKeyElement":{"N":"AttributeValue2"}}""")
     }
   }
 }

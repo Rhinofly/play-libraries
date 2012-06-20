@@ -146,3 +146,29 @@ object PutItemResponse extends ((Map[String, AttributeValue], Double) => PutItem
     )
   }
 }
+
+/*
+ * DELETE ITEM
+ */
+case class DeleteItemRequest(tableName:String, key:Key, returnValues:ReturnValuesType = NONE, expected:Option[Map[String, AttributeExpectation]] = None)
+
+object DeleteItemRequest extends ((String, Key, ReturnValuesType, Option[Map[String, AttributeExpectation]]) => DeleteItemRequest) {
+  implicit object DeleteItemRequestWrites extends Writes[DeleteItemRequest] with JsonUtils {
+    def writes(r:DeleteItemRequest):JsValue = JsObject(List(
+        "TableName" -> toJson(r.tableName),
+        "Key" -> toJson(r.key),
+        "ReturnValues" -> toJson(r.returnValues)) :::
+        optional("Expected", r.expected))
+  }
+}
+
+case class DeleteItemResponse(attributes:Map[String, AttributeValue], consumedCapacityUnits:Double)
+
+object DeleteItemResponse extends ((Map[String, AttributeValue], Double) => DeleteItemResponse) {
+  implicit object DeleteItemResponseReads extends Reads[DeleteItemResponse] {
+    def reads(json:JsValue) = DeleteItemResponse(
+    		(json \ "Attributes").as[Map[String, AttributeValue]],
+    		(json \ "ConsumedCapacityUnits").as[Double]
+    )
+  }
+}
