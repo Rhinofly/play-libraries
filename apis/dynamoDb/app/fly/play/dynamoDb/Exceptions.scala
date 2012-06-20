@@ -17,6 +17,7 @@ object DynamoDbException {
       case "com.amazonaws.dynamodb.v20111205#SerializationException" => SerializationException(message)
       case "com.amazonaws.dynamodb.v20111205#ResourceInUseException" => ResourceInUseException(message)
       case "com.amazonaws.dynamodb.v20111205#ResourceNotFoundException" => ResourceNotFoundException(message)
+      case "com.amazonaws.dynamodb.v20111205#ConditionalCheckFailedException" => ConditionalCheckFailedException(message)
       case _ => throw new Exception("Unknown error: " + tpe + " with message: " + message)
     }
   }
@@ -25,3 +26,4 @@ object DynamoDbException {
 case class SerializationException(message: String) extends DynamoDbException
 case class ResourceInUseException(message: String) extends DynamoDbException
 case class ResourceNotFoundException(message: String) extends DynamoDbException
+case class ConditionalCheckFailedException(message: String) extends DynamoDbException
