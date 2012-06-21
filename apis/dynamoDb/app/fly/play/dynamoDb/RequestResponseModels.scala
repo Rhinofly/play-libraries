@@ -261,3 +261,27 @@ object BatchWriteItemResponse extends ((Map[String, Double], Map[String, Seq[Bat
     )
   }
 }
+
+/*
+ * BATCH GET ITEM
+ */
+case class BatchGetItemRequest(requestItems:Map[String, GetRequest])
+
+object BatchGetItemRequest extends (Map[String, GetRequest] => BatchGetItemRequest) {
+  implicit object BatchGetItemRequestWrites extends Writes[BatchGetItemRequest] {
+    def writes(r:BatchGetItemRequest):JsValue = JsObject(Seq(
+    		"RequestItems" -> toJson(r.requestItems)
+    ))
+  }
+}
+
+case class BatchGetItemResponse(responses:Map[String, TableItems], unprocessedKeys:Map[String, GetRequest])
+
+object BatchGetItemResponse extends ((Map[String, TableItems], Map[String, GetRequest]) => BatchGetItemResponse) {
+  implicit object BatchGetItemResponseReads extends Reads[BatchGetItemResponse] {
+    def reads(json:JsValue) = BatchGetItemResponse(
+    		(json \ "Responses").as[Map[String, TableItems]],
+    		(json \ "UnprocessedKeys").as[Map[String, GetRequest]]
+    )
+  }
+}

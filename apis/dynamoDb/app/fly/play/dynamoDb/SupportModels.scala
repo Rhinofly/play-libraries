@@ -283,3 +283,30 @@ object BatchRequest {
 
 case class PutRequest(item:Map[String, AttributeValue]) extends BatchRequest
 case class DeleteRequest(key:Key) extends BatchRequest
+
+case class GetRequest(keys:Seq[Key], attributesToGet:Option[Seq[String]])
+
+object GetRequest extends ((Seq[Key], Option[Seq[String]]) => GetRequest) {
+  implicit object GetRequestFormat extends Format[GetRequest] with JsonUtils {
+    def writes(g:GetRequest):JsValue = JsObject(List(
+        "Keys" -> toJson(g.keys)) :::
+        optional("AttributesToGet", g.attributesToGet)
+    )
+    
+    def reads(json:JsValue) = GetRequest(
+        (json \ "Keys").as[Seq[Key]],
+        (json \ "AttributesToGet").as[Option[Seq[String]]]
+    )
+  }
+}
+
+case class TableItems(items:Seq[Map[String, AttributeValue]], consumedCapacityUnits:Double)
+
+object TableItems extends ((Seq[Map[String, AttributeValue]], Double) => TableItems) {
+  implicit object TableItemsReads extends Reads[TableItems] {
+    def reads(json:JsValue) = TableItems(
+    		(json \ "Items").as[Seq[Map[String, AttributeValue]]],
+    		(json \ "ConsumedCapacityUnits").as[Double]
+    )
+  } 
+}

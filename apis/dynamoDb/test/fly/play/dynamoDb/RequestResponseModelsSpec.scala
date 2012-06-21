@@ -174,7 +174,7 @@ object RequestResponseModelsSpec extends Specification {
           "Subject" -> AttributeValue(S, "DynamoDB Thread 5"))))))) must_== parse("""{"RequestItems":{"Reply":[{"PutRequest":{"Item":{"ReplyDateTime":{"S":"2012-04-03T11:04:47.034Z"},"Id":{"S":"Amazon DynamoDB#DynamoDB Thread 5"}}}},{"DeleteRequest":{"Key":{"HashKeyElement":{"S":"Amazon DynamoDB#DynamoDB Thread 4"},"RangeKeyElement":{"S":"oops - accidental row"}}}}],"Thread":[{"PutRequest":{"Item":{"ForumName":{"S":"Amazon DynamoDB"},"Subject":{"S":"DynamoDB Thread 5"}}}}]}}""")
 
   }
-  
+
   "BatchWriteItemResponse should be created from json" in {
     fromJson[BatchWriteItemResponse](parse("""{
 	   "Responses":{
@@ -202,7 +202,72 @@ object RequestResponseModelsSpec extends Specification {
 	      ]
 	   }
     }""")) must beLike {
-      case BatchWriteItemResponse(x:Map[_, _], y:Map[_, _]) if (x == Map("Thread" -> 1, "Reply" -> 1) && y == Map("Reply" -> Seq(DeleteRequest(Key(AttributeValue(S, "Amazon DynamoDB#DynamoDB Thread 4"), Some(AttributeValue(S, "oops - accidental row"))))))) => ok
+      case BatchWriteItemResponse(x: Map[_, _], y: Map[_, _]) if (x == Map("Thread" -> 1, "Reply" -> 1) && y == Map("Reply" -> Seq(DeleteRequest(Key(AttributeValue(S, "Amazon DynamoDB#DynamoDB Thread 4"), Some(AttributeValue(S, "oops - accidental row"))))))) => ok
+    }
+  }
+
+  "BatchGetItemRequest should create correct json" in {
+    toJson(BatchGetItemRequest(Map(
+      "Table1" -> GetRequest(Seq(
+        Key(AttributeValue(S, "KeyValue1"), Some(AttributeValue(N, "KeyValue2"))),
+        Key(AttributeValue(S, "KeyValue3"), Some(AttributeValue(N, "KeyValue4"))),
+        Key(AttributeValue(S, "KeyValue5"), Some(AttributeValue(N, "KeyValue6")))),
+        Some(Seq("AttributeName1", "AttributeName2", "AttributeName3"))),
+      "Table2" -> GetRequest(Seq(
+        Key(AttributeValue(S, "KeyValue4")),
+        Key(AttributeValue(S, "KeyValue5"))),
+        Some(Seq("AttributeName4", "AttributeName5", "AttributeName6")))))) must_== parse("""{"RequestItems":
+	    {"Table1": 
+	        {"Keys": 
+	            [{"HashKeyElement": {"S":"KeyValue1"}, "RangeKeyElement":{"N":"KeyValue2"}},
+	            {"HashKeyElement": {"S":"KeyValue3"}, "RangeKeyElement":{"N":"KeyValue4"}},
+	            {"HashKeyElement": {"S":"KeyValue5"}, "RangeKeyElement":{"N":"KeyValue6"}}],
+	        "AttributesToGet":["AttributeName1", "AttributeName2", "AttributeName3"]},
+		    "Table2": 
+		        {"Keys": 
+		            [{"HashKeyElement": {"S":"KeyValue4"}}, 
+		            {"HashKeyElement": {"S":"KeyValue5"}}],
+		        "AttributesToGet": ["AttributeName4", "AttributeName5", "AttributeName6"]
+		        }
+		    }
+    	}""")
+  }
+
+  "BatchGetItemResponse should be created from json" in {
+    fromJson[BatchGetItemResponse](parse("""{"Responses":
+	    {"Table1":
+	        {"Items":
+	        [{"AttributeName1": {"S":"AttributeValue"},
+	        "AttributeName2": {"N":"AttributeValue"},
+	        "AttributeName3": {"SS":["AttributeValue", "AttributeValue", "AttributeValue"]}
+	        },
+	        {"AttributeName1": {"S": "AttributeValue"},
+	        "AttributeName2": {"S": "AttributeValue"},
+	        "AttributeName3": {"NS": ["AttributeValue", "AttributeValue", "AttributeValue"]}
+	        }],
+	    "ConsumedCapacityUnits":1},
+	    "Table2": 
+	        {"Items":
+	        [{"AttributeName1": {"S":"AttributeValue"},
+	        "AttributeName2": {"N":"AttributeValue"},
+	        "AttributeName3": {"SS":["AttributeValue", "AttributeValue", "AttributeValue"]}
+	        },
+	        {"AttributeName1": {"S": "AttributeValue"},
+	        "AttributeName2": {"S": "AttributeValue"},
+	        "AttributeName3": {"NS": ["AttributeValue", "AttributeValue","AttributeValue"]}
+	        }],
+	    "ConsumedCapacityUnits":1}
+	    },
+	    "UnprocessedKeys":
+	        {"Table3": 
+	        {"Keys": 
+	            [{"HashKeyElement": {"S":"KeyValue1"}, "RangeKeyElement":{"N":"KeyValue2"}},
+	            {"HashKeyElement": {"S":"KeyValue3"}, "RangeKeyElement":{"N":"KeyValue4"}},
+	            {"HashKeyElement": {"S":"KeyValue5"}, "RangeKeyElement":{"N":"KeyValue6"}}],
+	        "AttributesToGet":["AttributeName1", "AttributeName2", "AttributeName3"]}
+	        }
+    	}""")) must beLike {
+      case BatchGetItemResponse(x: Map[_, _], y: Map[_, _]) => ok
     }
   }
 }

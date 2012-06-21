@@ -156,7 +156,57 @@ object SupportModelsSpec extends Specification {
           }
         }
       }""")) must beLike {
-        case PutRequest(x:Map[_, _]) if (x == Map("ReplyDateTime" -> AttributeValue(S, "2012-04-03T11:04:47.034Z"), "Id" -> AttributeValue(S, "Amazon DynamoDB#DynamoDB Thread 5"))) => ok
+        case PutRequest(x: Map[_, _]) if (x == Map("ReplyDateTime" -> AttributeValue(S, "2012-04-03T11:04:47.034Z"), "Id" -> AttributeValue(S, "Amazon DynamoDB#DynamoDB Thread 5"))) => ok
+      }
+    }
+  }
+
+  "GetRequest" should {
+    "create correct json" in {
+      toJson(GetRequest(Seq(
+        Key(AttributeValue(S, "KeyValue1"), Some(AttributeValue(N, "KeyValue2"))),
+        Key(AttributeValue(S, "KeyValue3"), Some(AttributeValue(N, "KeyValue4"))),
+        Key(AttributeValue(S, "KeyValue5"), Some(AttributeValue(N, "KeyValue6")))),
+        Some(Seq("AttributeName1", "AttributeName2", "AttributeName3")))) must_== parse("""{"Keys": 
+            [{"HashKeyElement": {"S":"KeyValue1"}, "RangeKeyElement":{"N":"KeyValue2"}},
+            {"HashKeyElement": {"S":"KeyValue3"}, "RangeKeyElement":{"N":"KeyValue4"}},
+            {"HashKeyElement": {"S":"KeyValue5"}, "RangeKeyElement":{"N":"KeyValue6"}}],
+        "AttributesToGet":["AttributeName1", "AttributeName2", "AttributeName3"]}""")
+    }
+    "be created from json" in {
+      fromJson[GetRequest](parse("""{"Keys": 
+            [{"HashKeyElement": {"S":"KeyValue1"}, "RangeKeyElement":{"N":"KeyValue2"}},
+            {"HashKeyElement": {"S":"KeyValue3"}, "RangeKeyElement":{"N":"KeyValue4"}},
+            {"HashKeyElement": {"S":"KeyValue5"}, "RangeKeyElement":{"N":"KeyValue6"}}],
+        "AttributesToGet":["AttributeName1", "AttributeName2", "AttributeName3"]}""")) must beLike {
+        case GetRequest(Seq(
+          Key(SimpleAttributeValue(S, "KeyValue1"), Some(SimpleAttributeValue(N, "KeyValue2"))),
+          Key(SimpleAttributeValue(S, "KeyValue3"), Some(SimpleAttributeValue(N, "KeyValue4"))),
+          Key(SimpleAttributeValue(S, "KeyValue5"), Some(SimpleAttributeValue(N, "KeyValue6")))),
+          Some(Seq("AttributeName1", "AttributeName2", "AttributeName3"))) => ok
+      }
+    }
+  }
+
+  "TableItems" should {
+    "be created from json" in {
+      fromJson[TableItems](parse("""{"Items":
+        [{"AttributeName1": {"S":"AttributeValue"},
+        "AttributeName2": {"N":"AttributeValue"},
+        "AttributeName3": {"SS":["AttributeValue", "AttributeValue", "AttributeValue"]}
+        },
+        {"AttributeName1": {"S": "AttributeValue"},
+        "AttributeName2": {"S": "AttributeValue"},
+        "AttributeName3": {"NS": ["AttributeValue", "AttributeValue", "AttributeValue"]}
+        }],
+    	"ConsumedCapacityUnits":1}""")) must beLike {
+        case TableItems(Seq(x, y), 1) if (x == Map(
+          "AttributeName1" -> AttributeValue(S, "AttributeValue"),
+          "AttributeName2" -> AttributeValue(N, "AttributeValue"),
+          "AttributeName3" -> AttributeValue(SS, Seq("AttributeValue", "AttributeValue", "AttributeValue"))) && y == Map(
+            "AttributeName1" -> AttributeValue(S, "AttributeValue"),
+            "AttributeName2" -> AttributeValue(S, "AttributeValue"),
+            "AttributeName3" -> AttributeValue(NS, Seq("AttributeValue", "AttributeValue", "AttributeValue")))) => ok
       }
     }
   }
