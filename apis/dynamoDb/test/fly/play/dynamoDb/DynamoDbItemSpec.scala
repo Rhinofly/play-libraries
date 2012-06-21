@@ -59,6 +59,20 @@ object DynamoDbItemSpec extends Specification with Before {
     }
   }
   
+  "batch write item" should {
+    "put and delete items" in {
+      DynamoDb(PutItemRequest("TestTable1", Map("id" -> AttributeValue(S, "elem2"), "attribute1" -> AttributeValue(S, "value1")), NONE)).value.get must beLike {
+        case Right(None) => ok
+      }
+      
+      DynamoDb(BatchWriteItemRequest(Map("TestTable1" -> Seq(
+          PutRequest(Map("id" -> AttributeValue(S, "elem3"), "attribute1" -> AttributeValue(SS, Seq("value1", "value2")))),
+          DeleteRequest(Key(AttributeValue(S, "elem2"))))))).value.get must beLike {
+        case Right(BatchWriteItemResponse(x:Map[_, _], y:Map[_, _])) => ok
+      }
+    }
+  }
+  
   "delete item" should {
     "delete an item" in {
       DynamoDb(DeleteItemRequest("TestTable1", Key(AttributeValue(S, "elem1")), ALL_OLD)).value.get must beLike {

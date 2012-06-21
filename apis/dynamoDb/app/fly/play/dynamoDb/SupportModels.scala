@@ -215,11 +215,15 @@ case object UPDATED_NEW extends ReturnValuesType("UPDATED_NEW")
 case class Key(hashKeyElement: AttributeValue, rangeKeyElement: Option[AttributeValue] = None)
 
 object Key extends ((AttributeValue, Option[AttributeValue]) => Key) {
-  implicit object KeyWrites extends Writes[Key] with JsonUtils {
+  implicit object KeyFormat extends Format[Key] with JsonUtils {
     def writes(k: Key): JsValue = JsObject(List(
       "HashKeyElement" -> toJson(k.hashKeyElement)) :::
       optional("RangeKeyElement", k.rangeKeyElement))
 
+    def reads(json:JsValue) = Key(
+    		(json \ "HashKeyElement").as[AttributeValue],
+    		(json \ "RangeKeyElement").as[Option[AttributeValue]]
+    )
   }
 }
 
@@ -254,3 +258,28 @@ object AttributeUpdate extends ((AttributeValue, AttributeUpdateAction) => Attri
       "Action" -> toJson(a.action)))
   }
 }
+
+sealed trait BatchRequest
+
+object BatchRequest {
+  implicit object BatchRequestFormat extends Format[BatchRequest] {
+    def writes(b:BatchRequest):JsValue = JsObject(Seq(
+    		b match {
+    		  case PutRequest(item) => "PutRequest" -> JsObject(Seq("Item" -> toJson(item)))
+    		  case DeleteRequest(key) => "DeleteRequest" -> JsObject(Seq("Key" -> toJson(key)))
+    		}
+    ))
+    
+    def reads(json: JsValue) = {
+      val attributeFormat = json.as[Map[String, JsObject]]
+      attributeFormat.head match {
+        case ("PutRequest", value: JsObject) => PutRequest((value \ "Item").as[Map[String, AttributeValue]])
+        case ("DeleteRequest", value: JsObject) => DeleteRequest((value \ "Key").as[Key])
+        case _ => throw new Exception("Invalid key - value combination: " + json)
+      }
+    }
+  }
+}
+
+case class PutRequest(item:Map[String, AttributeValue]) extends BatchRequest
+case class DeleteRequest(key:Key) extends BatchRequest

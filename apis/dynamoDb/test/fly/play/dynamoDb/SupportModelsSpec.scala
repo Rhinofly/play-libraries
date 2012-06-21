@@ -105,7 +105,7 @@ object SupportModelsSpec extends Specification {
       toJson(Key(AttributeValue(S, "AttributeValue1"), Some(AttributeValue(N, "AttributeValue2")))) must_== parse("""{"HashKeyElement":{"S":"AttributeValue1"},"RangeKeyElement":{"N":"AttributeValue2"}}""")
     }
   }
-  
+
   "AttributeUpdate" should {
     "throw an assertion exception" >> {
       AttributeUpdate(AttributeValue(SS, Seq.empty), DELETE) must throwA[IllegalArgumentException]
@@ -113,6 +113,51 @@ object SupportModelsSpec extends Specification {
     }
     "create correct json" in {
       toJson(AttributeUpdate(AttributeValue(N, "10"), ADD)) must_== parse("""{"Value":{"N":"10"},"Action":"ADD"}""")
+    }
+  }
+
+  "PutRequest" should {
+    "create correct json" in {
+      toJson[BatchRequest](PutRequest(Map("ReplyDateTime" -> AttributeValue(S, "2012-04-03T11:04:47.034Z"), "Id" -> AttributeValue(S, "Amazon DynamoDB#DynamoDB Thread 5")))) must_== parse("""{"PutRequest":{"Item":{"ReplyDateTime":{"S":"2012-04-03T11:04:47.034Z"},"Id":{"S":"Amazon DynamoDB#DynamoDB Thread 5"}}}}""")
+    }
+  }
+
+  "DeleteRequest" should {
+    "create correct json" in {
+      toJson[BatchRequest](DeleteRequest(Key(AttributeValue(S, "Amazon DynamoDB#DynamoDB Thread 4"), Some(AttributeValue(S, "oops - accidental row"))))) must_== parse("""{"DeleteRequest":{"Key":{"HashKeyElement":{"S":"Amazon DynamoDB#DynamoDB Thread 4"},"RangeKeyElement":{"S":"oops - accidental row"}}}}""")
+    }
+  }
+
+  "BatchRequest" should {
+    "be created from json" >> {
+      fromJson[BatchRequest](parse("""{
+            "DeleteRequest":{
+               "Key":{
+                  "HashKeyElement":{
+                     "S":"Amazon DynamoDB#DynamoDB Thread 4"
+                  },
+                  "RangeKeyElement":{
+                     "S":"oops - accidental row"
+                  }
+               }
+            }
+         }""")) must beLike {
+        case DeleteRequest(Key(SimpleAttributeValue(S, "Amazon DynamoDB#DynamoDB Thread 4"), Some(SimpleAttributeValue(S, "oops - accidental row")))) => ok
+      }
+      fromJson[BatchRequest](parse("""{
+        "PutRequest":{
+          "Item":{
+            "ReplyDateTime":{
+              "S":"2012-04-03T11:04:47.034Z"
+            },
+            "Id":{
+              "S":"Amazon DynamoDB#DynamoDB Thread 5"
+            }
+          }
+        }
+      }""")) must beLike {
+        case PutRequest(x:Map[_, _]) if (x == Map("ReplyDateTime" -> AttributeValue(S, "2012-04-03T11:04:47.034Z"), "Id" -> AttributeValue(S, "Amazon DynamoDB#DynamoDB Thread 5"))) => ok
+      }
     }
   }
 }

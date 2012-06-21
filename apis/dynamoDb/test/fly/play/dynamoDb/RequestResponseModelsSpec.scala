@@ -48,7 +48,11 @@ object RequestResponseModelsSpec extends Specification {
   }
 
   "DeleteTableRequest should create correct json" in {
-    toJson(DeleteTableRequest("Table1")) must_== parse("""{"TableName":"Table1"}""")
+    toJson(DeleteTableRequest("Table1")) must_== parse("""
+        {
+    		"TableName":"Table1"
+        }
+        """)
   }
 
   "DeleteTableResponse should be created from json" in {
@@ -127,33 +131,78 @@ object RequestResponseModelsSpec extends Specification {
       case DeleteItemResponse(x: Map[_, _], 1) => ok
     }
   }
-  
+
   "UpdateItemRequest should create correct json" in {
     toJson(
-    		UpdateItemRequest("Table1", 
-    		    Key(AttributeValue(S, "AttributeValue1"), Some(AttributeValue(N, "AttributeValue2"))),
-    		    Map("AttributeName3" -> AttributeUpdate(AttributeValue(S, "AttributeValue3_New"))),
-    		    UPDATED_NEW,
-    		    Some(Map("AttributeName3" -> AttributeExpectation(true, Some(AttributeValue(S, "AttributeValue3_Current"))))))) must_== parse("""{"TableName":"Table1","Key":{"HashKeyElement":{"S":"AttributeValue1"},"RangeKeyElement":{"N":"AttributeValue2"}},"AttributeUpdates":{"AttributeName3":{"Value":{"S":"AttributeValue3_New"},"Action":"PUT"}},"ReturnValues":"UPDATED_NEW","Expected":{"AttributeName3":{"Exists":true,"Value":{"S":"AttributeValue3_Current"}}}}""")
+      UpdateItemRequest("Table1",
+        Key(AttributeValue(S, "AttributeValue1"), Some(AttributeValue(N, "AttributeValue2"))),
+        Map("AttributeName3" -> AttributeUpdate(AttributeValue(S, "AttributeValue3_New"))),
+        UPDATED_NEW,
+        Some(Map("AttributeName3" -> AttributeExpectation(true, Some(AttributeValue(S, "AttributeValue3_Current"))))))) must_== parse("""{"TableName":"Table1","Key":{"HashKeyElement":{"S":"AttributeValue1"},"RangeKeyElement":{"N":"AttributeValue2"}},"AttributeUpdates":{"AttributeName3":{"Value":{"S":"AttributeValue3_New"},"Action":"PUT"}},"ReturnValues":"UPDATED_NEW","Expected":{"AttributeName3":{"Exists":true,"Value":{"S":"AttributeValue3_Current"}}}}""")
   }
-  
+
   "UpdateItemResponse should be created from json" in {
     fromJson[UpdateItemResponse](parse("""{"Attributes":{"AttributeName1":{"S":"AttributeValue1"},"AttributeName2":{"S":"AttributeValue2"},"AttributeName3":{"S":"AttributeValue3"}},"ConsumedCapacityUnits":1}""")) must beLike {
-      case UpdateItemResponse(x:Map[_, _], 1) => ok
+      case UpdateItemResponse(x: Map[_, _], 1) => ok
     }
   }
-  
+
   "GetItemRequest should create correct json" in {
     toJson(
-        GetItemRequest("Table1",
-            Key(AttributeValue(S, "AttributeValue1"), Some(AttributeValue(N, "AttributeValue2"))),
-            Some(List("AttributeName3", "AttributeName4")),
-            false)) must_== parse("""{"TableName":"Table1","Key":{"HashKeyElement": {"S":"AttributeValue1"},"RangeKeyElement": {"N":"AttributeValue2"}},"ConsistentRead":false,"AttributesToGet":["AttributeName3","AttributeName4"]}""")
+      GetItemRequest("Table1",
+        Key(AttributeValue(S, "AttributeValue1"), Some(AttributeValue(N, "AttributeValue2"))),
+        Some(List("AttributeName3", "AttributeName4")),
+        false)) must_== parse("""{"TableName":"Table1","Key":{"HashKeyElement": {"S":"AttributeValue1"},"RangeKeyElement": {"N":"AttributeValue2"}},"ConsistentRead":false,"AttributesToGet":["AttributeName3","AttributeName4"]}""")
   }
-  
+
   "GetItemResponse should be created from json" in {
     fromJson[GetItemResponse](parse("""{"Item":{"AttributeName3":{"S":"AttributeValue3"},"AttributeName4":{"N":"AttributeValue4"}},"ConsumedCapacityUnits": 0.5}""")) must beLike {
-      case GetItemResponse(x:Map[_, _], 0.5) => ok
+      case GetItemResponse(x: Map[_, _], 0.5) => ok
+    }
+  }
+
+  "BatchWriteItemRequest should create correct json" in {
+    toJson(BatchWriteItemRequest(Map(
+      "Reply" -> Seq[BatchRequest](
+        PutRequest(Map(
+          "ReplyDateTime" -> AttributeValue(S, "2012-04-03T11:04:47.034Z"),
+          "Id" -> AttributeValue(S, "Amazon DynamoDB#DynamoDB Thread 5"))),
+        DeleteRequest(Key(AttributeValue(S, "Amazon DynamoDB#DynamoDB Thread 4"), Some(AttributeValue(S, "oops - accidental row"))))),
+      "Thread" -> Seq(
+        PutRequest(Map(
+          "ForumName" -> AttributeValue(S, "Amazon DynamoDB"),
+          "Subject" -> AttributeValue(S, "DynamoDB Thread 5"))))))) must_== parse("""{"RequestItems":{"Reply":[{"PutRequest":{"Item":{"ReplyDateTime":{"S":"2012-04-03T11:04:47.034Z"},"Id":{"S":"Amazon DynamoDB#DynamoDB Thread 5"}}}},{"DeleteRequest":{"Key":{"HashKeyElement":{"S":"Amazon DynamoDB#DynamoDB Thread 4"},"RangeKeyElement":{"S":"oops - accidental row"}}}}],"Thread":[{"PutRequest":{"Item":{"ForumName":{"S":"Amazon DynamoDB"},"Subject":{"S":"DynamoDB Thread 5"}}}}]}}""")
+
+  }
+  
+  "BatchWriteItemResponse should be created from json" in {
+    fromJson[BatchWriteItemResponse](parse("""{
+	   "Responses":{
+	      "Thread":{
+	         "ConsumedCapacityUnits":1.0
+	      },
+	      "Reply":{
+	         "ConsumedCapacityUnits":1.0
+	      }
+	   },
+	   "UnprocessedItems":{
+	      "Reply":[
+	         {
+	            "DeleteRequest":{
+	               "Key":{
+	                  "HashKeyElement":{
+	                     "S":"Amazon DynamoDB#DynamoDB Thread 4"
+	                  },
+	                  "RangeKeyElement":{
+	                     "S":"oops - accidental row"
+	                  }
+	               }
+	            }
+	         }
+	      ]
+	   }
+    }""")) must beLike {
+      case BatchWriteItemResponse(x:Map[_, _], y:Map[_, _]) if (x == Map("Thread" -> 1, "Reply" -> 1) && y == Map("Reply" -> Seq(DeleteRequest(Key(AttributeValue(S, "Amazon DynamoDB#DynamoDB Thread 4"), Some(AttributeValue(S, "oops - accidental row"))))))) => ok
     }
   }
 }
