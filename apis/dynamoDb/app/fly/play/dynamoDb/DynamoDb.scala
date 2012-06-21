@@ -69,4 +69,8 @@ object DynamoDb {
 	/** @see http://docs.amazonwebservices.com/amazondynamodb/latest/developerguide/API_UpdateItem.html */
 	def updateItem(request:UpdateItemRequest)(implicit credentials:AwsCredentials) = post("UpdateItem", request, response[Option[UpdateItemResponse]])
 	def apply(request:UpdateItemRequest)(implicit credentials:AwsCredentials) = updateItem(request)
+	
+	/** @see http://docs.amazonwebservices.com/amazondynamodb/latest/developerguide/API_GetItem.html */
+	def getItem(request:GetItemRequest)(implicit credentials:AwsCredentials) = post("GetItem", request, response[GetItemResponse])
+	def apply(request:GetItemRequest)(implicit credentials:AwsCredentials) = getItem(request)
 }

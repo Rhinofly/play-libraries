@@ -211,3 +211,30 @@ object UpdateItemResponse extends ((Map[String, AttributeValue], Double) => Upda
     )
   }
 }
+
+/*
+ * GET ITEM
+ */
+
+case class GetItemRequest(tableName:String, key:Key, attributesToGet:Option[Seq[String]] = None, consistentRead:Boolean = false)
+
+object GetItemRequest extends ((String, Key, Option[Seq[String]], Boolean) => GetItemRequest) {
+  implicit object GetItemRequestWrites extends Writes[GetItemRequest] with JsonUtils {
+    def writes(r:GetItemRequest):JsValue = JsObject(List(
+    "TableName" -> toJson(r.tableName),
+    "Key" -> toJson(r.key),
+    "ConsistentRead" -> toJson(r.consistentRead)) :::
+    optional("AttributesToGet", r.attributesToGet))
+  }
+}
+
+case class GetItemResponse(item:Map[String, AttributeValue], consumedCapacityUnits:Double)
+
+object GetItemResponse extends ((Map[String, AttributeValue], Double) => GetItemResponse) {
+  implicit object GetItemResponseReads extends Reads[GetItemResponse] {
+    def reads(json:JsValue) = GetItemResponse(
+    		(json \ "Item").as[Map[String, AttributeValue]],
+    		(json \ "ConsumedCapacityUnits").as[Double]
+    )
+  }
+}

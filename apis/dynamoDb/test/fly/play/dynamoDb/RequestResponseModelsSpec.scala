@@ -142,4 +142,18 @@ object RequestResponseModelsSpec extends Specification {
       case UpdateItemResponse(x:Map[_, _], 1) => ok
     }
   }
+  
+  "GetItemRequest should create correct json" in {
+    toJson(
+        GetItemRequest("Table1",
+            Key(AttributeValue(S, "AttributeValue1"), Some(AttributeValue(N, "AttributeValue2"))),
+            Some(List("AttributeName3", "AttributeName4")),
+            false)) must_== parse("""{"TableName":"Table1","Key":{"HashKeyElement": {"S":"AttributeValue1"},"RangeKeyElement": {"N":"AttributeValue2"}},"ConsistentRead":false,"AttributesToGet":["AttributeName3","AttributeName4"]}""")
+  }
+  
+  "GetItemResponse should be created from json" in {
+    fromJson[GetItemResponse](parse("""{"Item":{"AttributeName3":{"S":"AttributeValue3"},"AttributeName4":{"N":"AttributeValue4"}},"ConsumedCapacityUnits": 0.5}""")) must beLike {
+      case GetItemResponse(x:Map[_, _], 0.5) => ok
+    }
+  }
 }

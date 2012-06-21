@@ -51,6 +51,14 @@ object DynamoDbItemSpec extends Specification with Before {
     }
   }
   
+  "get item" should {
+    "retrieve an item" in {
+      DynamoDb(GetItemRequest("TestTable1", Key(AttributeValue(S, "elem1")), Some(List("attribute1")), true)).value.get must beLike {
+        case Right(GetItemResponse(x:Map[_, _], _)) if (x == Map("attribute1" -> AttributeValue(S, "value4"))) => ok
+      }
+    }
+  }
+  
   "delete item" should {
     "delete an item" in {
       DynamoDb(DeleteItemRequest("TestTable1", Key(AttributeValue(S, "elem1")), ALL_OLD)).value.get must beLike {
