@@ -210,4 +210,18 @@ object SupportModelsSpec extends Specification {
       }
     }
   }
+  
+  "RangeKeyCondition" should {
+    "throw an assertion exception" >> {
+      RangeKeyCondition(Seq(AttributeValue(SS, Seq("a", "b"))), EQ) must throwA[IllegalArgumentException]
+      RangeKeyCondition(Seq(AttributeValue(S, "a"), AttributeValue(S, "b")), EQ) must throwA[IllegalArgumentException]
+      RangeKeyCondition(Seq(AttributeValue(N, "1")), BEGINS_WITH) must throwA[IllegalArgumentException]
+      RangeKeyCondition(Seq(AttributeValue(N, "1")), BETWEEN) must throwA[IllegalArgumentException]
+      RangeKeyCondition(Seq(AttributeValue(N, "1"), AttributeValue(S, "1")), BETWEEN) must throwA[IllegalArgumentException]
+    }
+    "create correct Json" >> {
+      toJson(RangeKeyCondition(Seq(AttributeValue(N, "AttributeValue2")), GT)) must_== parse("""{"AttributeValueList":[{"N":"AttributeValue2"}],"ComparisonOperator":"GT"}""")
+      toJson(RangeKeyCondition(Seq(AttributeValue(S, "AttributeValue1"), AttributeValue(S, "AttributeValue2")), BETWEEN)) must_== parse("""{"AttributeValueList":[{"S":"AttributeValue1"},{"S":"AttributeValue2"}],"ComparisonOperator":"BETWEEN"}""")
+    }
+  }
 }

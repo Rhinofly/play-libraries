@@ -49,7 +49,7 @@ object AttributeType {
     case "N" => N
     case "NS" => NS
     case "SS" => SS
-    case _ => throw new Exception("Could not create TableStatus from '" + value + "'")
+    case _ => throw new Exception("Could not create AttributeType from '" + value + "'")
   }
 }
 
@@ -140,7 +140,7 @@ object Table extends ((String, TableStatus, Option[Date], Option[Long], Option[I
   }
 }
 
-sealed trait AttributeValue {
+sealed abstract class AttributeValue {
   type ValueType
 
   def tpe: AttributeType
@@ -181,6 +181,7 @@ object AttributeValue {
   def apply(tpe: SimpleAttributeType, value: String): AttributeValue = SimpleAttributeValue(tpe, value)
   def apply(tpe: SeqAttributeType, value: Seq[String]): AttributeValue = SeqAttributeValue(tpe, value)
 
+  def unapply(a:AttributeValue):Option[(AttributeType, Any)] = if (a == null) None else Some((a.tpe, a.value))
 }
 
 case class SimpleAttributeValue(tpe: SimpleAttributeType, value: String) extends AttributeValue { type ValueType = String }
@@ -309,4 +310,42 @@ object TableItems extends ((Seq[Map[String, AttributeValue]], Double) => TableIt
     		(json \ "ConsumedCapacityUnits").as[Double]
     )
   } 
+}
+
+sealed abstract class ComparisonOperator(val value: String)
+
+object ComparisonOperator {
+  implicit object ComparisonOperatorWrites extends Writes[ComparisonOperator] {
+    def writes(a: ComparisonOperator): JsValue = JsString(a.value)
+  }
+}
+
+case object EQ extends ComparisonOperator("EQ")
+case object LE extends ComparisonOperator("LE")
+case object LT extends ComparisonOperator("LT")
+case object GE extends ComparisonOperator("GE")
+case object GT extends ComparisonOperator("GT")
+case object BEGINS_WITH extends ComparisonOperator("BEGINS_WITH")
+case object BETWEEN extends ComparisonOperator("BETWEEN")
+
+case class RangeKeyCondition(attributeValueList:Seq[AttributeValue], comparisonOperator:ComparisonOperator) {
+  private val size = attributeValueList.size
+  comparisonOperator match {
+    case EQ | LE | LT | GE | GT => require(size == 1 && attributeValueList.head.isInstanceOf[SimpleAttributeValue], "The operator " + comparisonOperator + " requires that the attribute value list has a size of 1 and that it contains 1 simple attribute value")
+    case BEGINS_WITH =>  require(size == 1 && attributeValueList.head.tpe == S, "The operator BEGINS_WITH requires that the attribute value list has a size of 1 and that it contains a string attribute value")
+    case BETWEEN => require(size == 2 && (attributeValueList match {
+      case Seq(AttributeValue(S, _), AttributeValue(S, _)) => true 
+      case Seq(AttributeValue(N, _), AttributeValue(N, _)) => true
+      case _ => false
+    }), "The operator BETWEEN requires that the attribute value list has a size of 2 and that it contains two number or two string values")
+  }
+}
+
+object RangeKeyCondition extends ((Seq[AttributeValue], ComparisonOperator) => RangeKeyCondition) {
+  implicit object RangeKeyConditionWrites extends Writes[RangeKeyCondition] {
+    def writes(r:RangeKeyCondition):JsValue = JsObject(Seq(
+    		"AttributeValueList" -> toJson(r.attributeValueList),
+    		"ComparisonOperator" -> toJson(r.comparisonOperator)
+    ))
+  }
 }

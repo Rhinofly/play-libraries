@@ -270,4 +270,38 @@ object RequestResponseModelsSpec extends Specification {
       case BatchGetItemResponse(x: Map[_, _], y: Map[_, _]) => ok
     }
   }
+  
+  "QueryRequest should create correct json" in {
+    toJson(QueryRequest("Table1", AttributeValue(S, "AttributeValue1"), Some(RangeKeyCondition(Seq(AttributeValue(N, "AttributeValue2")), GT)), Some(Key(AttributeValue(S, "AttributeName1"), Some(AttributeValue(N, "AttributeName2")))), Some(Seq("AttributeName1", "AttributeName2", "AttributeName3")), true, Some(2), true)) must_== parse("""
+        {"TableName":"Table1",
+			"HashKeyValue":{"S":"AttributeValue1"},
+    		"ScanIndexForward":true,
+			"ConsistentRead":true,
+			"RangeKeyCondition": {"AttributeValueList":[{"N":"AttributeValue2"}],"ComparisonOperator":"GT"},
+			"ExclusiveStartKey":{
+				"HashKeyElement":{"S":"AttributeName1"},
+				"RangeKeyElement":{"N":"AttributeName2"}
+			},
+		    "AttributesToGet":["AttributeName1", "AttributeName2", "AttributeName3"],
+    		"Limit":2
+		}""")
+  }
+  
+  "QueryResponse should be created from json" in {
+    fromJson[QueryResponse](parse("""
+        {"Count":2,"Items":[{
+			"AttributeName1":{"S":"AttributeValue1"},
+			"AttributeName2":{"N":"AttributeValue2"},
+		    "AttributeName3":{"S":"AttributeValue3"}
+			},{
+			"AttributeName1":{"S":"AttributeValue3"},
+			"AttributeName2":{"N":"AttributeValue4"},
+		    "AttributeName3":{"S":"AttributeValue3"}
+			}],
+			"LastEvaluatedKey":{"HashKeyElement":{"S":"AttributeValue3"},"RangeKeyElement":{"N":"AttributeValue4"}},
+    		"ConsumedCapacityUnits":1
+		}""")) must beLike {
+      case QueryResponse(2, Seq(x:Map[_, _], y:Map[_, _]), Some(k:Key), 1) => ok
+    }
+  }
 }

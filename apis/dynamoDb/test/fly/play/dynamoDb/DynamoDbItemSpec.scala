@@ -78,9 +78,21 @@ object DynamoDbItemSpec extends Specification with Before {
       DynamoDb(BatchGetItemRequest(Map("TestTable1" -> GetRequest(
         Seq(Key(AttributeValue(S, "elem1")), Key(AttributeValue(S, "elem3"))),
         Some(Seq("id", "attribute1")))))).value.get must beLike {
+        //Might fail because the ordering is not determined in a batch get
         case Right(BatchGetItemResponse(x: Map[_, _], y: Map[_, _])) if (x == Map("TestTable1" -> TableItems(Seq(
           Map("id" -> AttributeValue(S, "elem1"), "attribute1" -> AttributeValue(S, "value4")),
           Map("id" -> AttributeValue(S, "elem3"), "attribute1" -> AttributeValue(SS, Seq("value1", "value2")))), 1))) => ok
+      }
+    }
+  }
+  
+  "query" should {
+    "retrieve items" in {
+      DynamoDb(QueryRequest("TestTable2", AttributeValue(S, "elem1"))).value.get must beLike {
+        case Right(QueryResponse(3, Seq(item1:Map[_, _], item2:Map[_, _], item3:Map[_, _]), None, _)) if ( 
+        	item1 ==  Map("id" -> AttributeValue(S, "elem1"), "range" -> AttributeValue(N, "1")) &&
+            item2 ==  Map("id" -> AttributeValue(S, "elem1"), "range" -> AttributeValue(N, "2")) &&
+            item3 ==  Map("id" -> AttributeValue(S, "elem1"), "range" -> AttributeValue(N, "3"))) => ok
       }
     }
   }

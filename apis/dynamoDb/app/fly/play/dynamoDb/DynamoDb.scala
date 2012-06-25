@@ -81,4 +81,9 @@ object DynamoDb {
 	/** @see http://docs.amazonwebservices.com/amazondynamodb/latest/developerguide/API_BatchGetItems.html */
 	def batchGetItem(request:BatchGetItemRequest)(implicit credentials:AwsCredentials) = post("BatchGetItem", request, response[BatchGetItemResponse])
 	def apply(request:BatchGetItemRequest)(implicit credentials:AwsCredentials) = batchGetItem(request)
+	
+	/** @see http://docs.amazonwebservices.com/amazondynamodb/latest/developerguide/API_Query.html */
+	def query(request:QueryRequest)(implicit credentials:AwsCredentials) = post("Query", request, response[QueryResponse])
+	def apply(request:QueryRequest)(implicit credentials:AwsCredentials) = query(request)
+	
 }

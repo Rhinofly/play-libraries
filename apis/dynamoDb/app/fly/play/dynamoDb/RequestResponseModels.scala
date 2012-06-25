@@ -1,8 +1,7 @@
 package fly.play.dynamoDb
 
 import play.api.libs.json.Json.{ toJson }
-import play.api.libs.json.{JsValue, Reads, Writes, JsObject}
-
+import play.api.libs.json.{ JsValue, Reads, Writes, JsObject }
 
 /*
  * LIST TABLES
@@ -38,7 +37,7 @@ case class CreateTableRequest(name: String, keySchema: KeySchema, provisionedThr
 }
 
 object CreateTableRequest extends ((String, KeySchema, ProvisionedThroughput) => CreateTableRequest) {
-  
+
   implicit object CreateTableRequestWrites extends Writes[CreateTableRequest] {
     def writes(r: CreateTableRequest): JsValue = JsObject(Seq(
       "TableName" -> toJson(r.name),
@@ -89,11 +88,11 @@ object DescribeTableRequest extends (String => DescribeTableRequest) {
   }
 }
 
-case class DescribeTableResponse(table:Table)
+case class DescribeTableResponse(table: Table)
 
 object DescribeTableResponse extends (Table => DescribeTableResponse) {
   implicit object DescribeTableResponseReads extends Reads[DescribeTableResponse] {
-    def reads(j:JsValue) = DescribeTableResponse((j \ "Table").as[Table])
+    def reads(j: JsValue) = DescribeTableResponse((j \ "Table").as[Table])
   }
 }
 
@@ -101,21 +100,21 @@ object DescribeTableResponse extends (Table => DescribeTableResponse) {
  * UPDATE TABLE
  */
 
-case class UpdateTableRequest(name:String, provisionedThroughput:ProvisionedThroughput)
+case class UpdateTableRequest(name: String, provisionedThroughput: ProvisionedThroughput)
 
 object UpdateTableRequest extends ((String, ProvisionedThroughput) => UpdateTableRequest) {
   implicit object UpdateTableRequestWrites extends Writes[UpdateTableRequest] {
-    def writes(r:UpdateTableRequest):JsValue = JsObject(Seq(
-        "TableName" -> toJson(r.name),
-        "ProvisionedThroughput" -> toJson(r.provisionedThroughput)))
+    def writes(r: UpdateTableRequest): JsValue = JsObject(Seq(
+      "TableName" -> toJson(r.name),
+      "ProvisionedThroughput" -> toJson(r.provisionedThroughput)))
   }
 }
 
-case class UpdateTableResponse(tableDescription:TableDescription)
+case class UpdateTableResponse(tableDescription: TableDescription)
 
 object UpdateTableResponse extends (TableDescription => UpdateTableResponse) {
   implicit object UpdateTableResponseReads extends Reads[UpdateTableResponse] {
-    def reads(j:JsValue) = UpdateTableResponse((j \ "TableDescription").as[TableDescription])
+    def reads(j: JsValue) = UpdateTableResponse((j \ "TableDescription").as[TableDescription])
   }
 }
 
@@ -123,8 +122,8 @@ object UpdateTableResponse extends (TableDescription => UpdateTableResponse) {
  * PUT ITEM
  */
 
-case class PutItemRequest(tableName:String, item:Map[String, AttributeValue], returnValues:ReturnValuesType = NONE, expected:Option[Map[String, AttributeExpectation]] = None) {
-   require(returnValues match {
+case class PutItemRequest(tableName: String, item: Map[String, AttributeValue], returnValues: ReturnValuesType = NONE, expected: Option[Map[String, AttributeExpectation]] = None) {
+  require(returnValues match {
     case NONE | ALL_OLD => true
     case _ => false
   }, "Put item only supports NONE and ALL_OLD as return values")
@@ -132,30 +131,28 @@ case class PutItemRequest(tableName:String, item:Map[String, AttributeValue], re
 
 object PutItemRequest extends ((String, Map[String, AttributeValue], ReturnValuesType, Option[Map[String, AttributeExpectation]]) => PutItemRequest) {
   implicit object PutItemRequestWrites extends Writes[PutItemRequest] with JsonUtils {
-    def writes(r:PutItemRequest):JsValue = JsObject(List(
-    		"TableName" -> toJson(r.tableName),
-    		"Item" -> toJson(r.item),
-    		"ReturnValues" -> toJson(r.returnValues)) :::
-    		optional("Expected", r.expected)
-    )
+    def writes(r: PutItemRequest): JsValue = JsObject(List(
+      "TableName" -> toJson(r.tableName),
+      "Item" -> toJson(r.item),
+      "ReturnValues" -> toJson(r.returnValues)) :::
+      optional("Expected", r.expected))
   }
 }
 
-case class PutItemResponse(attributes:Map[String, AttributeValue], consumedCapacityUnits:Double)
+case class PutItemResponse(attributes: Map[String, AttributeValue], consumedCapacityUnits: Double)
 
 object PutItemResponse extends ((Map[String, AttributeValue], Double) => PutItemResponse) {
   implicit object PutItemResponseReads extends Reads[PutItemResponse] {
-    def reads(json:JsValue) = PutItemResponse(
-    		(json \ "Attributes").as[Map[String, AttributeValue]],
-    		(json \ "ConsumedCapacityUnits").as[Double]
-    )
+    def reads(json: JsValue) = PutItemResponse(
+      (json \ "Attributes").as[Map[String, AttributeValue]],
+      (json \ "ConsumedCapacityUnits").as[Double])
   }
 }
 
 /*
  * DELETE ITEM
  */
-case class DeleteItemRequest(tableName:String, key:Key, returnValues:ReturnValuesType = NONE, expected:Option[Map[String, AttributeExpectation]] = None) {
+case class DeleteItemRequest(tableName: String, key: Key, returnValues: ReturnValuesType = NONE, expected: Option[Map[String, AttributeExpectation]] = None) {
   require(returnValues match {
     case NONE | ALL_OLD => true
     case _ => false
@@ -164,22 +161,21 @@ case class DeleteItemRequest(tableName:String, key:Key, returnValues:ReturnValue
 
 object DeleteItemRequest extends ((String, Key, ReturnValuesType, Option[Map[String, AttributeExpectation]]) => DeleteItemRequest) {
   implicit object DeleteItemRequestWrites extends Writes[DeleteItemRequest] with JsonUtils {
-    def writes(r:DeleteItemRequest):JsValue = JsObject(List(
-        "TableName" -> toJson(r.tableName),
-        "Key" -> toJson(r.key),
-        "ReturnValues" -> toJson(r.returnValues)) :::
-        optional("Expected", r.expected))
+    def writes(r: DeleteItemRequest): JsValue = JsObject(List(
+      "TableName" -> toJson(r.tableName),
+      "Key" -> toJson(r.key),
+      "ReturnValues" -> toJson(r.returnValues)) :::
+      optional("Expected", r.expected))
   }
 }
 
-case class DeleteItemResponse(attributes:Map[String, AttributeValue], consumedCapacityUnits:Double)
+case class DeleteItemResponse(attributes: Map[String, AttributeValue], consumedCapacityUnits: Double)
 
 object DeleteItemResponse extends ((Map[String, AttributeValue], Double) => DeleteItemResponse) {
   implicit object DeleteItemResponseReads extends Reads[DeleteItemResponse] {
-    def reads(json:JsValue) = DeleteItemResponse(
-    		(json \ "Attributes").as[Map[String, AttributeValue]],
-    		(json \ "ConsumedCapacityUnits").as[Double]
-    )
+    def reads(json: JsValue) = DeleteItemResponse(
+      (json \ "Attributes").as[Map[String, AttributeValue]],
+      (json \ "ConsumedCapacityUnits").as[Double])
   }
 }
 
@@ -187,28 +183,26 @@ object DeleteItemResponse extends ((Map[String, AttributeValue], Double) => Dele
  * UPDATE ITEM
  */
 
-case class UpdateItemRequest(tableName:String, key:Key, attributeUpdates:Map[String, AttributeUpdate], returnValues:ReturnValuesType = NONE, expected:Option[Map[String, AttributeExpectation]] = None)
+case class UpdateItemRequest(tableName: String, key: Key, attributeUpdates: Map[String, AttributeUpdate], returnValues: ReturnValuesType = NONE, expected: Option[Map[String, AttributeExpectation]] = None)
 
 object UpdateItemRequest extends ((String, Key, Map[String, AttributeUpdate], ReturnValuesType, Option[Map[String, AttributeExpectation]]) => UpdateItemRequest) {
   implicit object UpdateItemRequestWrites extends Writes[UpdateItemRequest] with JsonUtils {
-    def writes(r:UpdateItemRequest):JsValue = JsObject(List(
-    		"TableName" -> toJson(r.tableName),
-    		"Key" -> toJson(r.key),
-    		"AttributeUpdates" -> toJson(r.attributeUpdates),
-    		"ReturnValues" -> toJson(r.returnValues)) :::
-    		optional("Expected", r.expected)
-    )
+    def writes(r: UpdateItemRequest): JsValue = JsObject(List(
+      "TableName" -> toJson(r.tableName),
+      "Key" -> toJson(r.key),
+      "AttributeUpdates" -> toJson(r.attributeUpdates),
+      "ReturnValues" -> toJson(r.returnValues)) :::
+      optional("Expected", r.expected))
   }
 }
 
-case class UpdateItemResponse(attributes:Map[String, AttributeValue], consumedCapacityUnits:Double)
+case class UpdateItemResponse(attributes: Map[String, AttributeValue], consumedCapacityUnits: Double)
 
 object UpdateItemResponse extends ((Map[String, AttributeValue], Double) => UpdateItemResponse) {
   implicit object UpdateItemResponseReads extends Reads[UpdateItemResponse] {
-    def reads(json:JsValue) = UpdateItemResponse(
-    		(json \ "Attributes").as[Map[String, AttributeValue]],
-    		(json \ "ConsumedCapacityUnits").as[Double]
-    )
+    def reads(json: JsValue) = UpdateItemResponse(
+      (json \ "Attributes").as[Map[String, AttributeValue]],
+      (json \ "ConsumedCapacityUnits").as[Double])
   }
 }
 
@@ -216,72 +210,101 @@ object UpdateItemResponse extends ((Map[String, AttributeValue], Double) => Upda
  * GET ITEM
  */
 
-case class GetItemRequest(tableName:String, key:Key, attributesToGet:Option[Seq[String]] = None, consistentRead:Boolean = false)
+case class GetItemRequest(tableName: String, key: Key, attributesToGet: Option[Seq[String]] = None, consistentRead: Boolean = false)
 
 object GetItemRequest extends ((String, Key, Option[Seq[String]], Boolean) => GetItemRequest) {
   implicit object GetItemRequestWrites extends Writes[GetItemRequest] with JsonUtils {
-    def writes(r:GetItemRequest):JsValue = JsObject(List(
-    "TableName" -> toJson(r.tableName),
-    "Key" -> toJson(r.key),
-    "ConsistentRead" -> toJson(r.consistentRead)) :::
-    optional("AttributesToGet", r.attributesToGet))
+    def writes(r: GetItemRequest): JsValue = JsObject(List(
+      "TableName" -> toJson(r.tableName),
+      "Key" -> toJson(r.key),
+      "ConsistentRead" -> toJson(r.consistentRead)) :::
+      optional("AttributesToGet", r.attributesToGet))
   }
 }
 
-case class GetItemResponse(item:Map[String, AttributeValue], consumedCapacityUnits:Double)
+case class GetItemResponse(item: Map[String, AttributeValue], consumedCapacityUnits: Double)
 
 object GetItemResponse extends ((Map[String, AttributeValue], Double) => GetItemResponse) {
   implicit object GetItemResponseReads extends Reads[GetItemResponse] {
-    def reads(json:JsValue) = GetItemResponse(
-    		(json \ "Item").as[Map[String, AttributeValue]],
-    		(json \ "ConsumedCapacityUnits").as[Double]
-    )
+    def reads(json: JsValue) = GetItemResponse(
+      (json \ "Item").as[Map[String, AttributeValue]],
+      (json \ "ConsumedCapacityUnits").as[Double])
   }
 }
 
 /*
  * BATCH WRITE ITEM
  */
-case class BatchWriteItemRequest(requestItems:Map[String, Seq[BatchRequest]])
+case class BatchWriteItemRequest(requestItems: Map[String, Seq[BatchRequest]])
 
 object BatchWriteItemRequest extends (Map[String, Seq[BatchRequest]] => BatchWriteItemRequest) {
   implicit object BatchWriteItemRequestWrites extends Writes[BatchWriteItemRequest] {
-    def writes(r:BatchWriteItemRequest):JsValue = JsObject(Seq(
-        "RequestItems" -> toJson(r.requestItems)))
+    def writes(r: BatchWriteItemRequest): JsValue = JsObject(Seq(
+      "RequestItems" -> toJson(r.requestItems)))
   }
 }
 
-case class BatchWriteItemResponse(responses:Map[String, Double], unprocessedItems:Map[String, Seq[BatchRequest]])
+case class BatchWriteItemResponse(responses: Map[String, Double], unprocessedItems: Map[String, Seq[BatchRequest]])
 
 object BatchWriteItemResponse extends ((Map[String, Double], Map[String, Seq[BatchRequest]]) => BatchWriteItemResponse) {
   implicit object BatchWriteItemResponseReads extends Reads[BatchWriteItemResponse] {
-    def reads(json:JsValue) = BatchWriteItemResponse(
-    		(json \ "Responses").as[Map[String, JsObject]].map{case (k, v) => k -> (v \ "ConsumedCapacityUnits").as[Double]},
-    		(json \ "UnprocessedItems").as[Map[String, Seq[BatchRequest]]]
-    )
+    def reads(json: JsValue) = BatchWriteItemResponse(
+      (json \ "Responses").as[Map[String, JsObject]].map { case (k, v) => k -> (v \ "ConsumedCapacityUnits").as[Double] },
+      (json \ "UnprocessedItems").as[Map[String, Seq[BatchRequest]]])
   }
 }
 
 /*
  * BATCH GET ITEM
  */
-case class BatchGetItemRequest(requestItems:Map[String, GetRequest])
+case class BatchGetItemRequest(requestItems: Map[String, GetRequest])
 
 object BatchGetItemRequest extends (Map[String, GetRequest] => BatchGetItemRequest) {
   implicit object BatchGetItemRequestWrites extends Writes[BatchGetItemRequest] {
-    def writes(r:BatchGetItemRequest):JsValue = JsObject(Seq(
-    		"RequestItems" -> toJson(r.requestItems)
-    ))
+    def writes(r: BatchGetItemRequest): JsValue = JsObject(Seq(
+      "RequestItems" -> toJson(r.requestItems)))
   }
 }
 
-case class BatchGetItemResponse(responses:Map[String, TableItems], unprocessedKeys:Map[String, GetRequest])
+case class BatchGetItemResponse(responses: Map[String, TableItems], unprocessedKeys: Map[String, GetRequest])
 
 object BatchGetItemResponse extends ((Map[String, TableItems], Map[String, GetRequest]) => BatchGetItemResponse) {
   implicit object BatchGetItemResponseReads extends Reads[BatchGetItemResponse] {
-    def reads(json:JsValue) = BatchGetItemResponse(
-    		(json \ "Responses").as[Map[String, TableItems]],
-    		(json \ "UnprocessedKeys").as[Map[String, GetRequest]]
+    def reads(json: JsValue) = BatchGetItemResponse(
+      (json \ "Responses").as[Map[String, TableItems]],
+      (json \ "UnprocessedKeys").as[Map[String, GetRequest]])
+  }
+}
+
+/*
+ * QUERY
+ */
+
+case class QueryRequest(tableName: String, hashKeyValue: AttributeValue, rangeKeyCondition: Option[RangeKeyCondition] = None, exclusiveStartKey: Option[Key] = None, attributesToGet: Option[Seq[String]] = None, scanIndexForward: Boolean = true, limit: Option[Int] = None, consistentRead: Boolean = false) 
+
+object QueryRequest extends ((String, AttributeValue, Option[RangeKeyCondition], Option[Key], Option[Seq[String]], Boolean, Option[Int], Boolean) => QueryRequest) {
+  implicit object QueryRequestWrites extends Writes[QueryRequest] with JsonUtils {
+    def writes(r: QueryRequest): JsValue = JsObject(List(
+      "TableName" -> toJson(r.tableName),
+      "HashKeyValue" -> toJson(r.hashKeyValue),
+      "ScanIndexForward" -> toJson(r.scanIndexForward),
+      "ConsistentRead" -> toJson(r.consistentRead)) :::
+      optional("RangeKeyCondition", r.rangeKeyCondition) :::
+      optional("ExclusiveStartKey", r.exclusiveStartKey) :::
+      optional("AttributesToGet", r.attributesToGet) :::
+      optional("Limit", r.limit))
+  }
+}
+
+case class QueryResponse(count:Int, items:Seq[Map[String, AttributeValue]], lastEvaluatedKey:Option[Key], consumedCapacityUnits:Double)
+
+object QueryResponse extends ((Int, Seq[Map[String, AttributeValue]], Option[Key], Double) => QueryResponse) {
+  implicit object QueryResponseReads extends Reads[QueryResponse] {
+    def reads(json:JsValue) = QueryResponse(
+    		(json \ "Count").as[Int],
+    		(json \ "Items").as[Seq[Map[String, AttributeValue]]],
+    		(json \ "LastEvaluatedKey").asOpt[Key],
+    		(json \ "ConsumedCapacityUnits").as[Double]
     )
   }
 }
