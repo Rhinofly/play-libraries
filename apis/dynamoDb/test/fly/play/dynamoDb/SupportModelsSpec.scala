@@ -210,18 +210,22 @@ object SupportModelsSpec extends Specification {
       }
     }
   }
-  
-  "RangeKeyCondition" should {
+
+  "Condition" should {
     "throw an assertion exception" >> {
-      RangeKeyCondition(Seq(AttributeValue(SS, Seq("a", "b"))), EQ) must throwA[IllegalArgumentException]
-      RangeKeyCondition(Seq(AttributeValue(S, "a"), AttributeValue(S, "b")), EQ) must throwA[IllegalArgumentException]
-      RangeKeyCondition(Seq(AttributeValue(N, "1")), BEGINS_WITH) must throwA[IllegalArgumentException]
-      RangeKeyCondition(Seq(AttributeValue(N, "1")), BETWEEN) must throwA[IllegalArgumentException]
-      RangeKeyCondition(Seq(AttributeValue(N, "1"), AttributeValue(S, "1")), BETWEEN) must throwA[IllegalArgumentException]
+      Condition(EQ, Some(Seq(AttributeValue(SS, Seq("a", "b"))))) must throwA[IllegalArgumentException]
+      Condition(EQ, Some(Seq(AttributeValue(S, "a"), AttributeValue(S, "b")))) must throwA[IllegalArgumentException]
+      Condition(BEGINS_WITH, Some(Seq(AttributeValue(N, "1")))) must throwA[IllegalArgumentException]
+      Condition(BETWEEN, Some(Seq(AttributeValue(N, "1")))) must throwA[IllegalArgumentException]
+      Condition(BETWEEN, Some(Seq(AttributeValue(N, "1"), AttributeValue(S, "1")))) must throwA[IllegalArgumentException]
+      Condition(GT, None) must throwA[IllegalArgumentException]
+      Condition(NOT_NULL, Some(Seq())) must throwA[IllegalArgumentException]
+      Condition(IN, None) must throwA[IllegalArgumentException]
+      Condition(IN, Some(Seq(AttributeValue(SS, Seq("a", "b"))))) must throwA[IllegalArgumentException]
     }
     "create correct Json" >> {
-      toJson(RangeKeyCondition(Seq(AttributeValue(N, "AttributeValue2")), GT)) must_== parse("""{"AttributeValueList":[{"N":"AttributeValue2"}],"ComparisonOperator":"GT"}""")
-      toJson(RangeKeyCondition(Seq(AttributeValue(S, "AttributeValue1"), AttributeValue(S, "AttributeValue2")), BETWEEN)) must_== parse("""{"AttributeValueList":[{"S":"AttributeValue1"},{"S":"AttributeValue2"}],"ComparisonOperator":"BETWEEN"}""")
+      toJson(Condition(GT, Some(Seq(AttributeValue(N, "AttributeValue2"))))) must_== parse("""{"ComparisonOperator":"GT", "AttributeValueList":[{"N":"AttributeValue2"}]}""")
+      toJson(Condition(BETWEEN, Some(Seq(AttributeValue(S, "AttributeValue1"), AttributeValue(S, "AttributeValue2"))))) must_== parse("""{"ComparisonOperator":"BETWEEN", "AttributeValueList":[{"S":"AttributeValue1"},{"S":"AttributeValue2"}]}""")
     }
   }
 }

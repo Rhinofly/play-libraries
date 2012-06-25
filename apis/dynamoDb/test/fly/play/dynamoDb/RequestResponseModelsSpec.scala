@@ -271,22 +271,28 @@ object RequestResponseModelsSpec extends Specification {
     }
   }
   
-  "QueryRequest should create correct json" in {
-    toJson(QueryRequest("Table1", AttributeValue(S, "AttributeValue1"), Some(RangeKeyCondition(Seq(AttributeValue(N, "AttributeValue2")), GT)), Some(Key(AttributeValue(S, "AttributeName1"), Some(AttributeValue(N, "AttributeName2")))), Some(Seq("AttributeName1", "AttributeName2", "AttributeName3")), true, Some(2), true)) must_== parse("""
-        {"TableName":"Table1",
-			"HashKeyValue":{"S":"AttributeValue1"},
-    		"ScanIndexForward":true,
-			"ConsistentRead":true,
-			"RangeKeyCondition": {"AttributeValueList":[{"N":"AttributeValue2"}],"ComparisonOperator":"GT"},
-			"ExclusiveStartKey":{
-				"HashKeyElement":{"S":"AttributeName1"},
-				"RangeKeyElement":{"N":"AttributeName2"}
-			},
-		    "AttributesToGet":["AttributeName1", "AttributeName2", "AttributeName3"],
-    		"Limit":2
-		}""")
+  "QueryRequest" should {
+    
+	  "throw an assertion exception" in {
+	    QueryRequest("", AttributeValue(S, ""), Some(Condition(NULL, None))) must throwA[IllegalArgumentException]
+	  }
+	  "create correct json" in {
+	  toJson(QueryRequest("Table1", AttributeValue(S, "AttributeValue1"), Some(Condition(GT, Some(Seq(AttributeValue(N, "AttributeValue2"))))), Some(Key(AttributeValue(S, "AttributeName1"), Some(AttributeValue(N, "AttributeName2")))), Some(Seq("AttributeName1", "AttributeName2", "AttributeName3")), true, Some(2), true)) must_== parse("""
+			  {"TableName":"Table1",
+			  "HashKeyValue":{"S":"AttributeValue1"},
+			  "ScanIndexForward":true,
+			  "ConsistentRead":true,
+			  "RangeKeyCondition": {"ComparisonOperator":"GT","AttributeValueList":[{"N":"AttributeValue2"}]},
+			  "ExclusiveStartKey":{
+			  "HashKeyElement":{"S":"AttributeName1"},
+			  "RangeKeyElement":{"N":"AttributeName2"}
+			  },
+			  "AttributesToGet":["AttributeName1", "AttributeName2", "AttributeName3"],
+			  "Limit":2
+			  }""")
   }
-  
+  }
+
   "QueryResponse should be created from json" in {
     fromJson[QueryResponse](parse("""
         {"Count":2,"Items":[{
@@ -302,6 +308,47 @@ object RequestResponseModelsSpec extends Specification {
     		"ConsumedCapacityUnits":1
 		}""")) must beLike {
       case QueryResponse(2, Seq(x:Map[_, _], y:Map[_, _]), Some(k:Key), 1) => ok
+    }
+  }
+  
+  "ScanRequest" should {
+    "throw an assertion error" in {
+      ScanRequest("", Some(Seq()), count = true) must throwA[IllegalArgumentException]
+    }
+    "create correct json" in {
+      toJson(ScanRequest("Table1", Some(Seq("AttributeName1", "AttributeName2", "AttributeName3")), Some(Map("AttributeName1" -> Condition(EQ, Some(Seq(AttributeValue(S, "AttributeValue")))))), Some(2), false, Some(Key(AttributeValue(S, "AttributeName1"), Some(AttributeValue(N, "AttributeName2")))))) must_== parse("""
+          {"TableName":"Table1",
+            "Count": false,
+		    "Limit": 2,
+			"ScanFilter":{
+				"AttributeName1":{"ComparisonOperator":"EQ","AttributeValueList":[{"S":"AttributeValue"}]}
+			},
+		    "ExclusiveStartKey":{
+				"HashKeyElement":{"S":"AttributeName1"},
+				"RangeKeyElement":{"N":"AttributeName2"}
+			},
+		    "AttributesToGet":["AttributeName1", "AttributeName2", "AttributeName3"]
+		  }""")
+    }
+  }
+  
+  "ScanResponse should be created from json" in {
+    fromJson[ScanResponse](parse("""
+        {"Count":2,"Items":[{
+		    "AttributeName1":{"S":"AttributeValue1"},
+		    "AttributeName2":{"S":"AttributeValue2"},
+		    "AttributeName3":{"S":"AttributeValue3"}
+		    },{
+		    "AttributeName1":{"S":"AttributeValue4"},
+		    "AttributeName2":{"S":"AttributeValue5"},
+		    "AttributeName3":{"S":"AttributeValue6"}
+		    }],
+		    "LastEvaluatedKey":
+		        {"HashKeyElement":{"S":"AttributeName1"},
+		        "RangeKeyElement":{"N":"AttributeName2"}},
+		"ConsumedCapacityUnits":1,
+		"ScannedCount":2}""")) must beLike {
+      case ScanResponse(2, Some(Seq(x, y)), Some(z:Key), 1, 2) => ok
     }
   }
 }

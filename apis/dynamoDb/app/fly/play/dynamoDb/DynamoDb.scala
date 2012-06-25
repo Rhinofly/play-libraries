@@ -86,4 +86,8 @@ object DynamoDb {
 	def query(request:QueryRequest)(implicit credentials:AwsCredentials) = post("Query", request, response[QueryResponse])
 	def apply(request:QueryRequest)(implicit credentials:AwsCredentials) = query(request)
 	
+	/** @see http://docs.amazonwebservices.com/amazondynamodb/latest/developerguide/API_Scan.html */
+	def scan(request:ScanRequest)(implicit credentials:AwsCredentials) = post("Scan", request, response[ScanResponse])
+	def apply(request:ScanRequest)(implicit credentials:AwsCredentials) = scan(request)
+	
 }

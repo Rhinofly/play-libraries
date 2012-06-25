@@ -181,7 +181,7 @@ object AttributeValue {
   def apply(tpe: SimpleAttributeType, value: String): AttributeValue = SimpleAttributeValue(tpe, value)
   def apply(tpe: SeqAttributeType, value: Seq[String]): AttributeValue = SeqAttributeValue(tpe, value)
 
-  def unapply(a:AttributeValue):Option[(AttributeType, Any)] = if (a == null) None else Some((a.tpe, a.value))
+  def unapply(a: AttributeValue): Option[(AttributeType, Any)] = if (a == null) None else Some((a.tpe, a.value))
 }
 
 case class SimpleAttributeValue(tpe: SimpleAttributeType, value: String) extends AttributeValue { type ValueType = String }
@@ -221,10 +221,9 @@ object Key extends ((AttributeValue, Option[AttributeValue]) => Key) {
       "HashKeyElement" -> toJson(k.hashKeyElement)) :::
       optional("RangeKeyElement", k.rangeKeyElement))
 
-    def reads(json:JsValue) = Key(
-    		(json \ "HashKeyElement").as[AttributeValue],
-    		(json \ "RangeKeyElement").as[Option[AttributeValue]]
-    )
+    def reads(json: JsValue) = Key(
+      (json \ "HashKeyElement").as[AttributeValue],
+      (json \ "RangeKeyElement").as[Option[AttributeValue]])
   }
 }
 
@@ -264,13 +263,12 @@ sealed trait BatchRequest
 
 object BatchRequest {
   implicit object BatchRequestFormat extends Format[BatchRequest] {
-    def writes(b:BatchRequest):JsValue = JsObject(Seq(
-    		b match {
-    		  case PutRequest(item) => "PutRequest" -> JsObject(Seq("Item" -> toJson(item)))
-    		  case DeleteRequest(key) => "DeleteRequest" -> JsObject(Seq("Key" -> toJson(key)))
-    		}
-    ))
-    
+    def writes(b: BatchRequest): JsValue = JsObject(Seq(
+      b match {
+        case PutRequest(item) => "PutRequest" -> JsObject(Seq("Item" -> toJson(item)))
+        case DeleteRequest(key) => "DeleteRequest" -> JsObject(Seq("Key" -> toJson(key)))
+      }))
+
     def reads(json: JsValue) = {
       val attributeFormat = json.as[Map[String, JsObject]]
       attributeFormat.head match {
@@ -282,34 +280,31 @@ object BatchRequest {
   }
 }
 
-case class PutRequest(item:Map[String, AttributeValue]) extends BatchRequest
-case class DeleteRequest(key:Key) extends BatchRequest
+case class PutRequest(item: Map[String, AttributeValue]) extends BatchRequest
+case class DeleteRequest(key: Key) extends BatchRequest
 
-case class GetRequest(keys:Seq[Key], attributesToGet:Option[Seq[String]])
+case class GetRequest(keys: Seq[Key], attributesToGet: Option[Seq[String]])
 
 object GetRequest extends ((Seq[Key], Option[Seq[String]]) => GetRequest) {
   implicit object GetRequestFormat extends Format[GetRequest] with JsonUtils {
-    def writes(g:GetRequest):JsValue = JsObject(List(
-        "Keys" -> toJson(g.keys)) :::
-        optional("AttributesToGet", g.attributesToGet)
-    )
-    
-    def reads(json:JsValue) = GetRequest(
-        (json \ "Keys").as[Seq[Key]],
-        (json \ "AttributesToGet").as[Option[Seq[String]]]
-    )
+    def writes(g: GetRequest): JsValue = JsObject(List(
+      "Keys" -> toJson(g.keys)) :::
+      optional("AttributesToGet", g.attributesToGet))
+
+    def reads(json: JsValue) = GetRequest(
+      (json \ "Keys").as[Seq[Key]],
+      (json \ "AttributesToGet").as[Option[Seq[String]]])
   }
 }
 
-case class TableItems(items:Seq[Map[String, AttributeValue]], consumedCapacityUnits:Double)
+case class TableItems(items: Seq[Map[String, AttributeValue]], consumedCapacityUnits: Double)
 
 object TableItems extends ((Seq[Map[String, AttributeValue]], Double) => TableItems) {
   implicit object TableItemsReads extends Reads[TableItems] {
-    def reads(json:JsValue) = TableItems(
-    		(json \ "Items").as[Seq[Map[String, AttributeValue]]],
-    		(json \ "ConsumedCapacityUnits").as[Double]
-    )
-  } 
+    def reads(json: JsValue) = TableItems(
+      (json \ "Items").as[Seq[Map[String, AttributeValue]]],
+      (json \ "ConsumedCapacityUnits").as[Double])
+  }
 }
 
 sealed abstract class ComparisonOperator(val value: String)
@@ -327,25 +322,44 @@ case object GE extends ComparisonOperator("GE")
 case object GT extends ComparisonOperator("GT")
 case object BEGINS_WITH extends ComparisonOperator("BEGINS_WITH")
 case object BETWEEN extends ComparisonOperator("BETWEEN")
+case object NE extends ComparisonOperator("NE")
+case object NOT_NULL extends ComparisonOperator("NOT_NULL")
+case object NULL extends ComparisonOperator("NULL")
+case object CONTAINS extends ComparisonOperator("CONTAINS")
+case object NOT_CONTAINS extends ComparisonOperator("NOT_CONTAINS")
+case object IN extends ComparisonOperator("IN")
 
-case class RangeKeyCondition(attributeValueList:Seq[AttributeValue], comparisonOperator:ComparisonOperator) {
-  private val size = attributeValueList.size
+case class Condition(comparisonOperator: ComparisonOperator, attributeValueList: Option[Seq[AttributeValue]]) {
   comparisonOperator match {
-    case EQ | LE | LT | GE | GT => require(size == 1 && attributeValueList.head.isInstanceOf[SimpleAttributeValue], "The operator " + comparisonOperator + " requires that the attribute value list has a size of 1 and that it contains 1 simple attribute value")
-    case BEGINS_WITH =>  require(size == 1 && attributeValueList.head.tpe == S, "The operator BEGINS_WITH requires that the attribute value list has a size of 1 and that it contains a string attribute value")
-    case BETWEEN => require(size == 2 && (attributeValueList match {
-      case Seq(AttributeValue(S, _), AttributeValue(S, _)) => true 
-      case Seq(AttributeValue(N, _), AttributeValue(N, _)) => true
+    case EQ | LE | LT | GE | GT | NE | CONTAINS | NOT_CONTAINS => require(attributeValueList match {
+      case Some(Seq(SimpleAttributeValue(_, _))) => true
       case _ => false
-    }), "The operator BETWEEN requires that the attribute value list has a size of 2 and that it contains two number or two string values")
+    }, "The operator " + comparisonOperator + " requires that the attribute value list has a size of 1 and that it contains 1 simple attribute value")
+    case BEGINS_WITH => require(attributeValueList match {
+    	case Some(Seq(SimpleAttributeValue(S, _))) => true
+    	case _ => false
+    }, "The operator BEGINS_WITH requires that the attribute value list has a size of 1 and that it contains a string attribute value")
+    case BETWEEN => require(attributeValueList match {
+      case Some(Seq(AttributeValue(S, _), AttributeValue(S, _))) => true
+      case Some(Seq(AttributeValue(N, _), AttributeValue(N, _))) => true
+      case _ => false
+    }, "The operator BETWEEN requires that the attribute value list has a size of 2 and that it contains two number or two string values")
+    case NOT_NULL | NULL => require(attributeValueList match {
+      case None => true
+      case _ => false
+    }, "The operator " + comparisonOperator + " requires that no attribute value list is specified")
+    case IN => require(attributeValueList match {
+      case Some(x) if (x.size > 0 && x.forall(_.isInstanceOf[SimpleAttributeValue])) => true
+      case _ => false
+    }, "The operator IN requires that the attribute value list has a size of at least 1 and that it contains simple value attributes")
   }
 }
 
-object RangeKeyCondition extends ((Seq[AttributeValue], ComparisonOperator) => RangeKeyCondition) {
-  implicit object RangeKeyConditionWrites extends Writes[RangeKeyCondition] {
-    def writes(r:RangeKeyCondition):JsValue = JsObject(Seq(
-    		"AttributeValueList" -> toJson(r.attributeValueList),
-    		"ComparisonOperator" -> toJson(r.comparisonOperator)
-    ))
+object Condition extends ((ComparisonOperator, Option[Seq[AttributeValue]]) => Condition) {
+  implicit object ConditionWrites extends Writes[Condition] with JsonUtils {
+    def writes(c: Condition): JsValue = JsObject(List(
+      "ComparisonOperator" -> toJson(c.comparisonOperator)) :::
+
+      optional("AttributeValueList", c.attributeValueList))
   }
 }

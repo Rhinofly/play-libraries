@@ -85,14 +85,25 @@ object DynamoDbItemSpec extends Specification with Before {
       }
     }
   }
-  
+
   "query" should {
     "retrieve items" in {
       DynamoDb(QueryRequest("TestTable2", AttributeValue(S, "elem1"))).value.get must beLike {
-        case Right(QueryResponse(3, Seq(item1:Map[_, _], item2:Map[_, _], item3:Map[_, _]), None, _)) if ( 
-        	item1 ==  Map("id" -> AttributeValue(S, "elem1"), "range" -> AttributeValue(N, "1")) &&
-            item2 ==  Map("id" -> AttributeValue(S, "elem1"), "range" -> AttributeValue(N, "2")) &&
-            item3 ==  Map("id" -> AttributeValue(S, "elem1"), "range" -> AttributeValue(N, "3"))) => ok
+        case Right(QueryResponse(3, Seq(item1: Map[_, _], item2: Map[_, _], item3: Map[_, _]), None, _)) if (
+          item1 == Map("id" -> AttributeValue(S, "elem1"), "range" -> AttributeValue(N, "1")) &&
+          item2 == Map("id" -> AttributeValue(S, "elem1"), "range" -> AttributeValue(N, "2")) &&
+          item3 == Map("id" -> AttributeValue(S, "elem1"), "range" -> AttributeValue(N, "3"))) => ok
+      }
+    }
+  }
+
+  "scan" should {
+    "retrieve items" >> {
+      DynamoDb(ScanRequest("TestTable2", None, Some(Map("range" -> Condition(GT, Some(Seq(AttributeValue(N, "1")))))), None, true)).value.get must beLike {
+        case Right(ScanResponse(2, None, None, _, 3)) => ok
+      }
+      DynamoDb(ScanRequest("TestTable2", None, Some(Map("range" -> Condition(GT, Some(Seq(AttributeValue(N, "1")))))))).value.get must beLike {
+        case Right(ScanResponse(2, Some(Seq(item1: Map[_, _], item2: Map[_, _])), None, _, 3)) => ok
       }
     }
   }

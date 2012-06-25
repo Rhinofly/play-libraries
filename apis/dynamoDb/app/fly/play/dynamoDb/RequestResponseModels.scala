@@ -280,9 +280,15 @@ object BatchGetItemResponse extends ((Map[String, TableItems], Map[String, GetRe
  * QUERY
  */
 
-case class QueryRequest(tableName: String, hashKeyValue: AttributeValue, rangeKeyCondition: Option[RangeKeyCondition] = None, exclusiveStartKey: Option[Key] = None, attributesToGet: Option[Seq[String]] = None, scanIndexForward: Boolean = true, limit: Option[Int] = None, consistentRead: Boolean = false) 
+case class QueryRequest(tableName: String, hashKeyValue: AttributeValue, rangeKeyCondition: Option[Condition] = None, exclusiveStartKey: Option[Key] = None, attributesToGet: Option[Seq[String]] = None, scanIndexForward: Boolean = true, limit: Option[Int] = None, consistentRead: Boolean = false) {
+  require((rangeKeyCondition match {
+    case Some(Condition(EQ | LE | LT | GE | GT | BEGINS_WITH | BETWEEN, _)) => true
+    case Some(_) => false
+    case None => true
+  }), "The given operator is not valid in a range key condition")
+}
 
-object QueryRequest extends ((String, AttributeValue, Option[RangeKeyCondition], Option[Key], Option[Seq[String]], Boolean, Option[Int], Boolean) => QueryRequest) {
+object QueryRequest extends ((String, AttributeValue, Option[Condition], Option[Key], Option[Seq[String]], Boolean, Option[Int], Boolean) => QueryRequest) {
   implicit object QueryRequestWrites extends Writes[QueryRequest] with JsonUtils {
     def writes(r: QueryRequest): JsValue = JsObject(List(
       "TableName" -> toJson(r.tableName),
@@ -296,15 +302,49 @@ object QueryRequest extends ((String, AttributeValue, Option[RangeKeyCondition],
   }
 }
 
-case class QueryResponse(count:Int, items:Seq[Map[String, AttributeValue]], lastEvaluatedKey:Option[Key], consumedCapacityUnits:Double)
+case class QueryResponse(count: Int, items: Seq[Map[String, AttributeValue]], lastEvaluatedKey: Option[Key], consumedCapacityUnits: Double)
 
 object QueryResponse extends ((Int, Seq[Map[String, AttributeValue]], Option[Key], Double) => QueryResponse) {
   implicit object QueryResponseReads extends Reads[QueryResponse] {
-    def reads(json:JsValue) = QueryResponse(
-    		(json \ "Count").as[Int],
-    		(json \ "Items").as[Seq[Map[String, AttributeValue]]],
-    		(json \ "LastEvaluatedKey").asOpt[Key],
-    		(json \ "ConsumedCapacityUnits").as[Double]
-    )
+    def reads(json: JsValue) = QueryResponse(
+      (json \ "Count").as[Int],
+      (json \ "Items").as[Seq[Map[String, AttributeValue]]],
+      (json \ "LastEvaluatedKey").asOpt[Key],
+      (json \ "ConsumedCapacityUnits").as[Double])
+  }
+}
+
+/*
+ * SCAN
+ */
+case class ScanRequest(tableName: String, attributesToGet: Option[Seq[String]] = None, scanFilter: Option[Map[String, Condition]] = None, limit: Option[Int] = None, count: Boolean = false, exclusiveStartKey: Option[Key] = None) {
+  require(!count || attributesToGet.isEmpty, "When count is set to true, you may not pass attributes to get")
+}
+
+object ScanRequest extends ((String, Option[Seq[String]], Option[Map[String, Condition]], Option[Int], Boolean, Option[Key]) => ScanRequest) {
+  implicit object ScanRequestWrites extends Writes[ScanRequest] with JsonUtils {
+    def writes(r: ScanRequest): JsValue = JsObject(List(
+      "TableName" -> toJson(r.tableName),
+      "Count" -> toJson(r.count)) :::
+      optional("Limit", r.limit) :::
+      optional("ScanFilter", r.scanFilter) :::
+      optional("ExclusiveStartKey", r.exclusiveStartKey) :::
+      optional("AttributesToGet", r.attributesToGet))
+  }
+}
+
+case class ScanResponse(count: Int, items: Option[Seq[Map[String, AttributeValue]]], lastEvaluatedKey: Option[Key], consumedCapacityUnits: Double, scannedCount: Int)
+
+object ScanResponse extends ((Int, Option[Seq[Map[String, AttributeValue]]], Option[Key], Double, Int) => ScanResponse) {
+  implicit object ScanResponseReads extends Reads[ScanResponse] {
+    def reads(json: JsValue) = {
+     println(json)
+      ScanResponse(
+      (json \ "Count").as[Int],
+      (json \ "Items").asOpt[Seq[Map[String, AttributeValue]]],
+      (json \ "LastEvaluatedKey").asOpt[Key],
+      (json \ "ConsumedCapacityUnits").as[Double],
+      (json \ "ScannedCount").as[Int])
+    }
   }
 }
