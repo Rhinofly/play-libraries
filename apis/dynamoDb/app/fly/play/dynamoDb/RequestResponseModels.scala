@@ -3,6 +3,8 @@ package fly.play.dynamoDb
 import play.api.libs.json.Json.{ toJson }
 import play.api.libs.json.{ JsValue, Reads, Writes, JsObject }
 
+import models._
+
 /*
  * LIST TABLES
  */
@@ -11,9 +13,9 @@ case class ListTablesRequest(limit: Option[Int] = None, exclusiveStartTableName:
 
 object ListTablesRequest extends ((Option[Int], Option[String]) => ListTablesRequest) {
   implicit object ListTablesRequestWrites extends Writes[ListTablesRequest] with JsonUtils {
-    def writes(r: ListTablesRequest): JsValue = JsObject(
-      optional("Limit", r.limit) :::
-        optional("ExclusiveStartTableName", r.exclusiveStartTableName))
+    def writes(r: ListTablesRequest): JsValue = JsObject(Seq.empty ++
+      optional("Limit" -> r.limit) ++
+        optional("ExclusiveStartTableName" -> r.exclusiveStartTableName))
   }
 }
 
@@ -131,11 +133,11 @@ case class PutItemRequest(tableName: String, item: Map[String, AttributeValue], 
 
 object PutItemRequest extends ((String, Map[String, AttributeValue], ReturnValuesType, Option[Map[String, AttributeExpectation]]) => PutItemRequest) {
   implicit object PutItemRequestWrites extends Writes[PutItemRequest] with JsonUtils {
-    def writes(r: PutItemRequest): JsValue = JsObject(List(
+    def writes(r: PutItemRequest): JsValue = JsObject(Seq(
       "TableName" -> toJson(r.tableName),
       "Item" -> toJson(r.item),
-      "ReturnValues" -> toJson(r.returnValues)) :::
-      optional("Expected", r.expected))
+      "ReturnValues" -> toJson(r.returnValues)) ++
+      optional("Expected" -> r.expected))
   }
 }
 
@@ -161,11 +163,11 @@ case class DeleteItemRequest(tableName: String, key: Key, returnValues: ReturnVa
 
 object DeleteItemRequest extends ((String, Key, ReturnValuesType, Option[Map[String, AttributeExpectation]]) => DeleteItemRequest) {
   implicit object DeleteItemRequestWrites extends Writes[DeleteItemRequest] with JsonUtils {
-    def writes(r: DeleteItemRequest): JsValue = JsObject(List(
+    def writes(r: DeleteItemRequest): JsValue = JsObject(Seq(
       "TableName" -> toJson(r.tableName),
       "Key" -> toJson(r.key),
-      "ReturnValues" -> toJson(r.returnValues)) :::
-      optional("Expected", r.expected))
+      "ReturnValues" -> toJson(r.returnValues)) ++
+      optional("Expected" -> r.expected))
   }
 }
 
@@ -187,12 +189,12 @@ case class UpdateItemRequest(tableName: String, key: Key, attributeUpdates: Map[
 
 object UpdateItemRequest extends ((String, Key, Map[String, AttributeUpdate], ReturnValuesType, Option[Map[String, AttributeExpectation]]) => UpdateItemRequest) {
   implicit object UpdateItemRequestWrites extends Writes[UpdateItemRequest] with JsonUtils {
-    def writes(r: UpdateItemRequest): JsValue = JsObject(List(
+    def writes(r: UpdateItemRequest): JsValue = JsObject(Seq(
       "TableName" -> toJson(r.tableName),
       "Key" -> toJson(r.key),
       "AttributeUpdates" -> toJson(r.attributeUpdates),
-      "ReturnValues" -> toJson(r.returnValues)) :::
-      optional("Expected", r.expected))
+      "ReturnValues" -> toJson(r.returnValues)) ++
+      optional("Expected" -> r.expected))
   }
 }
 
@@ -214,11 +216,11 @@ case class GetItemRequest(tableName: String, key: Key, attributesToGet: Option[S
 
 object GetItemRequest extends ((String, Key, Option[Seq[String]], Boolean) => GetItemRequest) {
   implicit object GetItemRequestWrites extends Writes[GetItemRequest] with JsonUtils {
-    def writes(r: GetItemRequest): JsValue = JsObject(List(
+    def writes(r: GetItemRequest): JsValue = JsObject(Seq(
       "TableName" -> toJson(r.tableName),
       "Key" -> toJson(r.key),
-      "ConsistentRead" -> toJson(r.consistentRead)) :::
-      optional("AttributesToGet", r.attributesToGet))
+      "ConsistentRead" -> toJson(r.consistentRead)) ++
+      optional("AttributesToGet" -> r.attributesToGet))
   }
 }
 
@@ -290,15 +292,15 @@ case class QueryRequest(tableName: String, hashKeyValue: AttributeValue, rangeKe
 
 object QueryRequest extends ((String, AttributeValue, Option[Condition], Option[Key], Option[Seq[String]], Boolean, Option[Int], Boolean) => QueryRequest) {
   implicit object QueryRequestWrites extends Writes[QueryRequest] with JsonUtils {
-    def writes(r: QueryRequest): JsValue = JsObject(List(
+    def writes(r: QueryRequest): JsValue = JsObject(Seq(
       "TableName" -> toJson(r.tableName),
       "HashKeyValue" -> toJson(r.hashKeyValue),
       "ScanIndexForward" -> toJson(r.scanIndexForward),
-      "ConsistentRead" -> toJson(r.consistentRead)) :::
-      optional("RangeKeyCondition", r.rangeKeyCondition) :::
-      optional("ExclusiveStartKey", r.exclusiveStartKey) :::
-      optional("AttributesToGet", r.attributesToGet) :::
-      optional("Limit", r.limit))
+      "ConsistentRead" -> toJson(r.consistentRead)) ++
+      optional("RangeKeyCondition" -> r.rangeKeyCondition) ++
+      optional("ExclusiveStartKey" -> r.exclusiveStartKey) ++
+      optional("AttributesToGet" -> r.attributesToGet) ++
+      optional("Limit" -> r.limit))
   }
 }
 
@@ -323,13 +325,13 @@ case class ScanRequest(tableName: String, attributesToGet: Option[Seq[String]] =
 
 object ScanRequest extends ((String, Option[Seq[String]], Option[Map[String, Condition]], Option[Int], Boolean, Option[Key]) => ScanRequest) {
   implicit object ScanRequestWrites extends Writes[ScanRequest] with JsonUtils {
-    def writes(r: ScanRequest): JsValue = JsObject(List(
+    def writes(r: ScanRequest): JsValue = JsObject(Seq(
       "TableName" -> toJson(r.tableName),
-      "Count" -> toJson(r.count)) :::
-      optional("Limit", r.limit) :::
-      optional("ScanFilter", r.scanFilter) :::
-      optional("ExclusiveStartKey", r.exclusiveStartKey) :::
-      optional("AttributesToGet", r.attributesToGet))
+      "Count" -> toJson(r.count)) ++
+      optional("Limit" -> r.limit) ++
+      optional("ScanFilter" -> r.scanFilter) ++
+      optional("ExclusiveStartKey" -> r.exclusiveStartKey) ++
+      optional("AttributesToGet" -> r.attributesToGet))
   }
 }
 
@@ -337,14 +339,11 @@ case class ScanResponse(count: Int, items: Option[Seq[Map[String, AttributeValue
 
 object ScanResponse extends ((Int, Option[Seq[Map[String, AttributeValue]]], Option[Key], Double, Int) => ScanResponse) {
   implicit object ScanResponseReads extends Reads[ScanResponse] {
-    def reads(json: JsValue) = {
-     println(json)
-      ScanResponse(
+    def reads(json: JsValue) = ScanResponse(
       (json \ "Count").as[Int],
       (json \ "Items").asOpt[Seq[Map[String, AttributeValue]]],
       (json \ "LastEvaluatedKey").asOpt[Key],
       (json \ "ConsumedCapacityUnits").as[Double],
       (json \ "ScannedCount").as[Int])
-    }
   }
 }

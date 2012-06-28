@@ -2,11 +2,11 @@ package fly.play.dynamoDb
 
 import org.specs2.mutable.{ Specification, Before }
 import play.api.test.FakeApplication
-import fly.play.sts.AwsSessionCredentials
-import fly.play.aws.auth.AwsCredentials
 import play.api.libs.json.Json.{ toJson, parse, fromJson }
 import play.api.libs.json.JsValue
 import java.util.Date
+
+import models._
 
 object RequestResponseModelsSpec extends Specification {
 

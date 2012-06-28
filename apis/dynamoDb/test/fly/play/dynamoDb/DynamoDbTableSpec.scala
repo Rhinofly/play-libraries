@@ -2,12 +2,14 @@ package fly.play.dynamoDb
 
 import org.specs2.mutable.{ Specification, Before }
 import play.api.test.FakeApplication
-import fly.play.sts.AwsSessionCredentials
-import fly.play.aws.auth.AwsCredentials
 import play.api.libs.json.Json.{ toJson, parse, fromJson }
 import play.api.libs.json.JsValue
 import java.util.Date
 import org.specs2.specification.Example
+import fly.play.aws.auth.AwsCredentials
+import org.apache.http.MethodNotSupportedException
+
+import models._
 
 object DynamoDbTableSpec extends Specification with Before {
 
@@ -16,10 +18,7 @@ object DynamoDbTableSpec extends Specification with Before {
   def f = FakeApplication(new java.io.File("./test/"))
   def before = play.api.Play.start(f)
 
-  /*
-	Uncomment if you want to test table related method. These take quite some time
-	
-  def waitForStatus(name: String, status: TableStatus, example: => Example): Example = DynamoDb.describeTable(DescribeTableRequest(name)).value.get match {
+  def waitForStatus(name: String, status: TableStatus, example: => Example): Example = LowLevelDynamoDb(DescribeTableRequest(name)).value.get match {
     case Right(DescribeTableResponse(Table(_, status, _, _, _, _, _))) if (status == ACTIVE) =>
       println("found " + name + " in " + status + " state, performing action")
       example
@@ -35,6 +34,20 @@ object DynamoDbTableSpec extends Specification with Before {
       failure("error calling describe table => " + error.getClass.getName + ": " + error.message)
   }
 
+  "low level dynamo db" should {
+    
+	  "give a credentials error" in {
+		  implicit val credentials = AwsCredentials("fake", "credentials")
+				  LowLevelDynamoDb(CreateTableRequest("Test", KeySchema(Attribute("test", S)))).value.get must beLike {
+				  case Left(x: InvalidClientTokenIdException) => ok
+		  }
+	  }
+  }
+  
+  /*
+  	Uncomment if you want to run table related tests (these take quite some time)
+  	
+  
   "create table" should {
     println("create table")
 
@@ -43,7 +56,7 @@ object DynamoDbTableSpec extends Specification with Before {
     "create a Test table" in {
       println("create table - create a Test table")
 
-      DynamoDb.createTable(createRequest).value.get must beLike {
+      LowLevelDynamoDb(createRequest).value.get must beLike {
         case Right(CreateTableResponse(
           TableDescription("Test", CREATING, Some(x: Date),
             Some(KeySchema(Attribute("test", S), None)),
@@ -54,7 +67,7 @@ object DynamoDbTableSpec extends Specification with Before {
     "create a Test2 table" in {
       println("create table - create a Test2 table")
 
-      DynamoDb(CreateTableRequest("Test2", KeySchema(Attribute("string", S), Some(Attribute("number", N))))).value.get must beLike {
+      LowLevelDynamoDb(CreateTableRequest("Test2", KeySchema(Attribute("string", S), Some(Attribute("number", N))))).value.get must beLike {
         case Right(CreateTableResponse(
           TableDescription("Test2", CREATING, Some(x: Date),
             Some(KeySchema(Attribute("string", S), Some(Attribute("number", N)))),
@@ -65,7 +78,7 @@ object DynamoDbTableSpec extends Specification with Before {
     "return an exception when trying to create the same table" in {
       println("create table - return an exception when trying to create the same table")
 
-      DynamoDb.createTable(createRequest).value.get must beLike {
+      LowLevelDynamoDb(createRequest).value.get must beLike {
         case Left(ResourceInUseException(_)) => ok
       }
     }
@@ -77,11 +90,8 @@ object DynamoDbTableSpec extends Specification with Before {
     "make a successfull request" in {
       println("list tables - make a successfull request")
 
-      DynamoDb.listTables(ListTablesRequest(Some(10))).value.get must beLike {
-        case Right(ListTablesResponse(Seq("Test", "Test2"), None)) => ok
-      }
-      DynamoDb(ListTablesRequest(Some(10))).value.get must beLike {
-        case Right(ListTablesResponse(Seq("Test", "Test2"), None)) => ok
+      LowLevelDynamoDb(ListTablesRequest(Some(10))).value.get must beLike {
+        case Right(ListTablesResponse(Seq("Test", "Test2", "TestTable1", "TestTable2"), None)) => ok
       }
 
     }
@@ -93,14 +103,14 @@ object DynamoDbTableSpec extends Specification with Before {
     "return information for Test" in {
       println("describe table - return information for Test")
 
-      DynamoDb.describeTable(DescribeTableRequest("Test")).value.get must beLike {
+      LowLevelDynamoDb(DescribeTableRequest("Test")).value.get must beLike {
         case Right(DescribeTableResponse(Table("Test", _, _, _, _, _, _))) => ok
       }
     }
     "return information for Test2" in {
       println("describe table - return information for Test2")
 
-      DynamoDb(DescribeTableRequest("Test2")).value.get must beLike {
+      LowLevelDynamoDb(DescribeTableRequest("Test2")).value.get must beLike {
         case Right(DescribeTableResponse(Table("Test2", _, _, _, _, _, _))) => ok
       }
 
@@ -115,7 +125,7 @@ object DynamoDbTableSpec extends Specification with Before {
 
       waitForStatus("Test", ACTIVE, {
         println("updating table")
-        DynamoDb(UpdateTableRequest("Test", ProvisionedThroughput(10, 2))).value.get must beLike {
+        LowLevelDynamoDb(UpdateTableRequest("Test", ProvisionedThroughput(10, 2))).value.get must beLike {
           case Right(UpdateTableResponse(TableDescription("Test", UPDATING, _, _, ProvisionedThroughput(2, 2, Some(x), Some(y))))) => ok
         }
       })
@@ -126,7 +136,7 @@ object DynamoDbTableSpec extends Specification with Before {
   "delete table" should {
     println("delete table")
 
-    def deleteTable(name: String): Example = DynamoDb(DeleteTableRequest(name)).value.get match {
+    def deleteTable(name: String): Example = LowLevelDynamoDb(DeleteTableRequest(name)).value.get match {
       case Right(DeleteTableResponse(TableDescription(_, DELETING, _, _, _))) => {
         println("deleted table " + name)
         ok
@@ -152,7 +162,7 @@ object DynamoDbTableSpec extends Specification with Before {
 
   "cleanup" should {
     println("cleanup")
-    def checkRemoval(name: String): Example = DynamoDb.describeTable(DescribeTableRequest(name)).value.get match {
+    def checkRemoval(name: String): Example = LowLevelDynamoDb(DescribeTableRequest(name)).value.get match {
       case Right(DescribeTableResponse(Table(_, status, _, _, _, _, _))) => status match {
         case DELETING => {
           Thread sleep 1000
@@ -178,5 +188,5 @@ object DynamoDbTableSpec extends Specification with Before {
       ok
     }
   }
-   */
+  */
 }

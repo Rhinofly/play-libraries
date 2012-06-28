@@ -8,7 +8,7 @@ object ApplicationBuild extends Build {
   val appVersion = "1.0-SNAPSHOT"
 
   val appDependencies = Seq(
-      "nl.rhinofly" %% "api-sts" % "1.1"
+      "nl.rhinofly" %% "api-sts" % "1.2-SNAPSHOT"
   )
 
   def rhinoflyRepo(version: String) = {
@@ -19,6 +19,7 @@ object ApplicationBuild extends Build {
   val main = PlayProject(appName, appVersion, appDependencies, mainLang = SCALA).settings(
     organization := "nl.rhinofly",
     resolvers += rhinoflyRepo("RELEASE").get,
+    resolvers += rhinoflyRepo("SNAPSHOT").get,
     publishTo <<= version(rhinoflyRepo),
     credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"))
 
