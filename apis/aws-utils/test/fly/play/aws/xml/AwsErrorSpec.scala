@@ -1,0 +1,21 @@
+package fly.play.aws.xml
+
+import org.specs2.mutable.Specification
+
+object AwsErrorSpec extends Specification {
+  "AwsError" should {
+    "create a correct error from XML" in {
+      val xml = <ErrorResponse xmlns="https://sts.amazonaws.com/doc/2011-06-15/">
+                  <Error>
+                    <Type>Sender</Type>
+                    <Code>InvalidClientTokenId</Code>
+                    <Message>The security token included in the request is invalid.</Message>
+                  </Error>
+                  <RequestId>6fbc48cc-c16a-11e1-bd3b-1529eff94a35</RequestId>
+                </ErrorResponse>
+      AwsError(403, xml) must beLike {
+        case AwsError(403, "InvalidClientTokenId", "The security token included in the request is invalid.", Some(x)) if (x == xml) => ok
+      }
+    }
+  }
+}
