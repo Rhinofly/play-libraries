@@ -14,6 +14,8 @@ import fly.play.sts.AwsSessionCredentials
 import fly.play.sts.AwsSessionCredentials
 import fly.play.aws.AwsException
 
+import models._
+
 object LowLevelDynamoDb {
 
   val version = "DynamoDB_20111205."

@@ -47,7 +47,7 @@ object DynamoDbTableSpec extends Specification with Before {
   /*
   	Uncomment if you want to run table related tests (these take quite some time)
   	
-  
+  */
   "create table" should {
     println("create table")
 
@@ -188,5 +188,5 @@ object DynamoDbTableSpec extends Specification with Before {
       ok
     }
   }
-  */
+  
 }

@@ -164,12 +164,12 @@ object RequestResponseModelsSpec extends Specification {
   "BatchWriteItemRequest should create correct json" in {
     toJson(BatchWriteItemRequest(Map(
       "Reply" -> Seq[BatchRequest](
-        PutRequest(Map(
+        BatchPutRequest(Map(
           "ReplyDateTime" -> AttributeValue(S, "2012-04-03T11:04:47.034Z"),
           "Id" -> AttributeValue(S, "Amazon DynamoDB#DynamoDB Thread 5"))),
-        DeleteRequest(Key(AttributeValue(S, "Amazon DynamoDB#DynamoDB Thread 4"), Some(AttributeValue(S, "oops - accidental row"))))),
+        BatchDeleteRequest(Key(AttributeValue(S, "Amazon DynamoDB#DynamoDB Thread 4"), Some(AttributeValue(S, "oops - accidental row"))))),
       "Thread" -> Seq(
-        PutRequest(Map(
+        BatchPutRequest(Map(
           "ForumName" -> AttributeValue(S, "Amazon DynamoDB"),
           "Subject" -> AttributeValue(S, "DynamoDB Thread 5"))))))) must_== parse("""{"RequestItems":{"Reply":[{"PutRequest":{"Item":{"ReplyDateTime":{"S":"2012-04-03T11:04:47.034Z"},"Id":{"S":"Amazon DynamoDB#DynamoDB Thread 5"}}}},{"DeleteRequest":{"Key":{"HashKeyElement":{"S":"Amazon DynamoDB#DynamoDB Thread 4"},"RangeKeyElement":{"S":"oops - accidental row"}}}}],"Thread":[{"PutRequest":{"Item":{"ForumName":{"S":"Amazon DynamoDB"},"Subject":{"S":"DynamoDB Thread 5"}}}}]}}""")
 
@@ -202,18 +202,18 @@ object RequestResponseModelsSpec extends Specification {
 	      ]
 	   }
     }""")) must beLike {
-      case BatchWriteItemResponse(x: Map[_, _], y: Map[_, _]) if (x == Map("Thread" -> 1, "Reply" -> 1) && y == Map("Reply" -> Seq(DeleteRequest(Key(AttributeValue(S, "Amazon DynamoDB#DynamoDB Thread 4"), Some(AttributeValue(S, "oops - accidental row"))))))) => ok
+      case BatchWriteItemResponse(x: Map[_, _], y: Map[_, _]) if (x == Map("Thread" -> 1, "Reply" -> 1) && y == Map("Reply" -> Seq(BatchDeleteRequest(Key(AttributeValue(S, "Amazon DynamoDB#DynamoDB Thread 4"), Some(AttributeValue(S, "oops - accidental row"))))))) => ok
     }
   }
 
   "BatchGetItemRequest should create correct json" in {
     toJson(BatchGetItemRequest(Map(
-      "Table1" -> GetRequest(Seq(
+      "Table1" -> BatchGetRequest(Seq(
         Key(AttributeValue(S, "KeyValue1"), Some(AttributeValue(N, "KeyValue2"))),
         Key(AttributeValue(S, "KeyValue3"), Some(AttributeValue(N, "KeyValue4"))),
         Key(AttributeValue(S, "KeyValue5"), Some(AttributeValue(N, "KeyValue6")))),
         Some(Seq("AttributeName1", "AttributeName2", "AttributeName3"))),
-      "Table2" -> GetRequest(Seq(
+      "Table2" -> BatchGetRequest(Seq(
         Key(AttributeValue(S, "KeyValue4")),
         Key(AttributeValue(S, "KeyValue5"))),
         Some(Seq("AttributeName4", "AttributeName5", "AttributeName6")))))) must_== parse("""{"RequestItems":

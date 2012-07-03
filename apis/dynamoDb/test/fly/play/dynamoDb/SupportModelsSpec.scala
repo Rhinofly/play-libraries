@@ -118,13 +118,13 @@ object SupportModelsSpec extends Specification {
 
   "PutRequest" should {
     "create correct json" in {
-      toJson[BatchRequest](PutRequest(Map("ReplyDateTime" -> AttributeValue(S, "2012-04-03T11:04:47.034Z"), "Id" -> AttributeValue(S, "Amazon DynamoDB#DynamoDB Thread 5")))) must_== parse("""{"PutRequest":{"Item":{"ReplyDateTime":{"S":"2012-04-03T11:04:47.034Z"},"Id":{"S":"Amazon DynamoDB#DynamoDB Thread 5"}}}}""")
+      toJson[BatchRequest](BatchPutRequest(Map("ReplyDateTime" -> AttributeValue(S, "2012-04-03T11:04:47.034Z"), "Id" -> AttributeValue(S, "Amazon DynamoDB#DynamoDB Thread 5")))) must_== parse("""{"PutRequest":{"Item":{"ReplyDateTime":{"S":"2012-04-03T11:04:47.034Z"},"Id":{"S":"Amazon DynamoDB#DynamoDB Thread 5"}}}}""")
     }
   }
 
   "DeleteRequest" should {
     "create correct json" in {
-      toJson[BatchRequest](DeleteRequest(Key(AttributeValue(S, "Amazon DynamoDB#DynamoDB Thread 4"), Some(AttributeValue(S, "oops - accidental row"))))) must_== parse("""{"DeleteRequest":{"Key":{"HashKeyElement":{"S":"Amazon DynamoDB#DynamoDB Thread 4"},"RangeKeyElement":{"S":"oops - accidental row"}}}}""")
+      toJson[BatchRequest](BatchDeleteRequest(Key(AttributeValue(S, "Amazon DynamoDB#DynamoDB Thread 4"), Some(AttributeValue(S, "oops - accidental row"))))) must_== parse("""{"DeleteRequest":{"Key":{"HashKeyElement":{"S":"Amazon DynamoDB#DynamoDB Thread 4"},"RangeKeyElement":{"S":"oops - accidental row"}}}}""")
     }
   }
 
@@ -142,7 +142,7 @@ object SupportModelsSpec extends Specification {
                }
             }
          }""")) must beLike {
-        case DeleteRequest(Key(SimpleAttributeValue(S, "Amazon DynamoDB#DynamoDB Thread 4"), Some(SimpleAttributeValue(S, "oops - accidental row")))) => ok
+        case BatchDeleteRequest(Key(SimpleAttributeValue(S, "Amazon DynamoDB#DynamoDB Thread 4"), Some(SimpleAttributeValue(S, "oops - accidental row")))) => ok
       }
       fromJson[BatchRequest](parse("""{
         "PutRequest":{
@@ -156,14 +156,14 @@ object SupportModelsSpec extends Specification {
           }
         }
       }""")) must beLike {
-        case PutRequest(x: Map[_, _]) if (x == Map("ReplyDateTime" -> AttributeValue(S, "2012-04-03T11:04:47.034Z"), "Id" -> AttributeValue(S, "Amazon DynamoDB#DynamoDB Thread 5"))) => ok
+        case BatchPutRequest(x: Map[_, _]) if (x == Map("ReplyDateTime" -> AttributeValue(S, "2012-04-03T11:04:47.034Z"), "Id" -> AttributeValue(S, "Amazon DynamoDB#DynamoDB Thread 5"))) => ok
       }
     }
   }
 
   "GetRequest" should {
     "create correct json" in {
-      toJson(GetRequest(Seq(
+      toJson(BatchGetRequest(Seq(
         Key(AttributeValue(S, "KeyValue1"), Some(AttributeValue(N, "KeyValue2"))),
         Key(AttributeValue(S, "KeyValue3"), Some(AttributeValue(N, "KeyValue4"))),
         Key(AttributeValue(S, "KeyValue5"), Some(AttributeValue(N, "KeyValue6")))),
@@ -174,12 +174,12 @@ object SupportModelsSpec extends Specification {
         "AttributesToGet":["AttributeName1", "AttributeName2", "AttributeName3"]}""")
     }
     "be created from json" in {
-      fromJson[GetRequest](parse("""{"Keys": 
+      fromJson[BatchGetRequest](parse("""{"Keys": 
             [{"HashKeyElement": {"S":"KeyValue1"}, "RangeKeyElement":{"N":"KeyValue2"}},
             {"HashKeyElement": {"S":"KeyValue3"}, "RangeKeyElement":{"N":"KeyValue4"}},
             {"HashKeyElement": {"S":"KeyValue5"}, "RangeKeyElement":{"N":"KeyValue6"}}],
         "AttributesToGet":["AttributeName1", "AttributeName2", "AttributeName3"]}""")) must beLike {
-        case GetRequest(Seq(
+        case BatchGetRequest(Seq(
           Key(SimpleAttributeValue(S, "KeyValue1"), Some(SimpleAttributeValue(N, "KeyValue2"))),
           Key(SimpleAttributeValue(S, "KeyValue3"), Some(SimpleAttributeValue(N, "KeyValue4"))),
           Key(SimpleAttributeValue(S, "KeyValue5"), Some(SimpleAttributeValue(N, "KeyValue6")))),

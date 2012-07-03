@@ -66,8 +66,8 @@ object DynamoDbItemSpec extends Specification with Before {
       }
 
       LowLevelDynamoDb(BatchWriteItemRequest(Map("TestTable1" -> Seq(
-        PutRequest(Map("id" -> AttributeValue(S, "elem3"), "attribute1" -> AttributeValue(SS, Seq("value1", "value2")))),
-        DeleteRequest(Key(AttributeValue(S, "elem2"))))))).value.get must beLike {
+        BatchPutRequest(Map("id" -> AttributeValue(S, "elem3"), "attribute1" -> AttributeValue(SS, Seq("value1", "value2")))),
+        BatchDeleteRequest(Key(AttributeValue(S, "elem2"))))))).value.get must beLike {
         case Right(BatchWriteItemResponse(x: Map[_, _], y: Map[_, _])) => ok
       }
     }
@@ -75,7 +75,7 @@ object DynamoDbItemSpec extends Specification with Before {
 
   "batch get item" should {
     "retrieve items" in {
-      LowLevelDynamoDb(BatchGetItemRequest(Map("TestTable1" -> GetRequest(
+      LowLevelDynamoDb(BatchGetItemRequest(Map("TestTable1" -> BatchGetRequest(
         Seq(Key(AttributeValue(S, "elem1")), Key(AttributeValue(S, "elem3"))),
         Some(Seq("id", "attribute1")))))).value.get must beLike {
         //Might fail because the ordering is not determined in a batch get

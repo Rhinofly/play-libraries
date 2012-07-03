@@ -1,7 +1,34 @@
 package fly.play.dynamoDb.models
 
-import play.api.libs.json.{Format, JsValue, JsObject, Reads, JsString, JsArray}
+import play.api.libs.json.{Format, JsValue, JsObject, Reads, JsString, JsArray, Writes}
 import play.api.libs.json.Json.toJson
+
+sealed trait AttributeType {
+  def value: String
+}
+
+object AttributeType {
+  implicit object AttributeTypetatusFormat extends Format[AttributeType] {
+    def reads(json: JsValue) = AttributeType(json.as[String])
+    def writes(a: AttributeType): JsValue = toJson(a.value)
+  }
+
+  def apply(value: String) = value match {
+    case "S" => S
+    case "N" => N
+    case "NS" => NS
+    case "SS" => SS
+    case _ => throw new Exception("Could not create AttributeType from '" + value + "'")
+  }
+}
+
+abstract class SimpleAttributeType(val value: String) extends AttributeType
+abstract class SeqAttributeType(val value: String) extends AttributeType
+
+case object S extends SimpleAttributeType("S")
+case object N extends SimpleAttributeType("N")
+case object NS extends SeqAttributeType("NS")
+case object SS extends SeqAttributeType("SS")
 
 case class Attribute(name: String, tpe: AttributeType) {
   require(name.length > 0, "The given name should have length")
@@ -68,17 +95,46 @@ object AttributeValue {
 case class SimpleAttributeValue(tpe: SimpleAttributeType, value: String) extends AttributeValue { type ValueType = String }
 case class SeqAttributeValue(tpe: SeqAttributeType, value: Seq[String]) extends AttributeValue { type ValueType = Seq[String] }
 
+case class AttributeExpectation(exists: Boolean, value: Option[AttributeValue] = None) {
+  require((exists && value.isDefined) || (!exists && value.isEmpty), "If exists is false, value should be None. If exists is true, value should be Some")
+}
 
-case class Key(hashKeyElement: AttributeValue, rangeKeyElement: Option[AttributeValue] = None)
+object AttributeExpectation extends ((Boolean, Option[AttributeValue]) => AttributeExpectation) {
+  implicit object AttributeExpectationWrites extends Writes[AttributeExpectation] with JsonUtils {
+    def writes(a: AttributeExpectation): JsValue = JsObject(Seq(
+      "Exists" -> toJson(a.exists)) ++
+      optional("Value" -> a.value))
+  }
+}
 
-object Key extends ((AttributeValue, Option[AttributeValue]) => Key) {
-  implicit object KeyFormat extends Format[Key] with JsonUtils {
-    def writes(k: Key): JsValue = JsObject(Seq(
-      "HashKeyElement" -> toJson(k.hashKeyElement)) ++
-      optional("RangeKeyElement" -> k.rangeKeyElement))
+sealed abstract class AttributeUpdateAction(val value: String)
 
-    def reads(json: JsValue) = Key(
-      (json \ "HashKeyElement").as[AttributeValue],
-      (json \ "RangeKeyElement").as[Option[AttributeValue]])
+object AttributeUpdateAction {
+  implicit object AttributeUpdateActionWrites extends Writes[AttributeUpdateAction] {
+    def writes(a: AttributeUpdateAction): JsValue = toJson(a.value)
+  }
+}
+
+case object PUT extends AttributeUpdateAction("PUT")
+case object DELETE extends AttributeUpdateAction("DELETE")
+case object ADD extends AttributeUpdateAction("ADD")
+
+case class AttributeUpdate(value: AttributeValue, action: AttributeUpdateAction = PUT) {
+  require(action != DELETE || (value match {
+    case SeqAttributeValue(_, value) if value.size > 0 => true
+    case _ => false
+  }), "Delete action only works when providing a seq type attribute that is not empty")
+
+  require(action != ADD || (value match {
+    case SimpleAttributeValue(S, _) => false
+    case _ => true
+  }), "Add action does not work for simple string type attributes")
+}
+
+object AttributeUpdate extends ((AttributeValue, AttributeUpdateAction) => AttributeUpdate) {
+  implicit object AttributeUpdateWrites extends Writes[AttributeUpdate] {
+    def writes(a: AttributeUpdate): JsValue = JsObject(Seq(
+      "Value" -> toJson(a.value),
+      "Action" -> toJson(a.action)))
   }
 }
