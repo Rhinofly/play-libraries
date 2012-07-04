@@ -4,8 +4,12 @@ import play.api.libs.json.{JsValue, JsString, Reads}
 import fly.play.aws.AwsException
 
 sealed trait DynamoDbException {
-  def message: String
+  def message:String
+  
+  def throwException = throw DynamoDbRuntimeException(message)
 }
+
+case class DynamoDbRuntimeException(message:String) extends RuntimeException(message)
 
 object DynamoDbException {
   implicit object DynamoDbExceptionReads extends Reads[DynamoDbException] {

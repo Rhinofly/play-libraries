@@ -1,7 +1,7 @@
 Amazon DynamoDB module for Play 2.0
 =====================================================
 
-Low level API for the Amazon DynamoDB service 
+API for the Amazon DynamoDB service 
 
 
 Installation
