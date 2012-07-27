@@ -72,6 +72,9 @@ object Aws {
     def put[T](body: T)(implicit wrt: Writeable[T], ct: ContentTypeOf[T]): Promise[Response] =
       sign("PUT", body).put(body)
 
+    def put:Promise[Response] = 
+      put("")
+      
     def putAndRetrieveStream[A, T](body: T)(consumer: ResponseHeaders => Iteratee[Array[Byte], A])(implicit wrt: Writeable[T], ct: ContentTypeOf[T]): Promise[Iteratee[Array[Byte], A]] =
       sign("PUT", body).putAndRetrieveStream(body)(consumer)
 
