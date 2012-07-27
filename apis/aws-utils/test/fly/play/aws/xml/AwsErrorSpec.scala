@@ -17,5 +17,17 @@ object AwsErrorSpec extends Specification {
         case AwsError(403, "InvalidClientTokenId", "The security token included in the request is invalid.", Some(x)) if (x == xml) => ok
       }
     }
+    "create a correct error from XML without the correct root element" in {
+      val xml = <Error>
+                  <Code>NoSuchKey</Code>
+                  <Message>The specified key does not exist.</Message>
+                  <Key>nonExistingElement</Key>
+                  <RequestId>F5944A57D5444A0E</RequestId>
+                  <HostId>z85KnjetGT4/VVHxTYLdK7ykqQxygZCVBM6dI/ALBvw93f/0eUIiDKp3V5aDr8L/</HostId>
+                </Error>
+      AwsError(403, xml) must beLike {
+        case AwsError(403, "NoSuchKey", "The specified key does not exist.", Some(x)) if (x == xml) => ok
+      }
+    }
   }
 }
