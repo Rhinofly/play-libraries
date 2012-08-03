@@ -8,8 +8,10 @@ import java.util.Date
 import org.specs2.specification.Example
 import fly.play.aws.auth.AwsCredentials
 import org.apache.http.MethodNotSupportedException
-
 import models._
+import play.api.libs.concurrent.Promise
+import org.specs2.matcher.MatchResult
+import org.specs2.execute.ResultLike
 
 object DynamoDbTableSpec extends Specification with Before {
 
@@ -18,30 +20,14 @@ object DynamoDbTableSpec extends Specification with Before {
   def f = FakeApplication(new java.io.File("./test/"))
   def before = play.api.Play.start(f)
 
-  def waitForStatus(name: String, status: TableStatus, example: => Example): Example = LowLevelDynamoDb(DescribeTableRequest(name)).value.get match {
-    case Right(DescribeTableResponse(Table(_, status, _, _, _, _, _))) if (status == ACTIVE) =>
-      println("found " + name + " in " + status + " state, performing action")
-      example
-    case Right(DescribeTableResponse(Table(_, status, _, _, _, _, _))) =>
-      Thread sleep 1000
-      println("found " + name + " in " + status + " state, waiting")
-      waitForStatus(name, status, example)
-    case Left(ResourceNotFoundException(_)) | Right(_) =>
-      Thread sleep 1000
-      println("Test does not yet exist, waiting for table " + name + " to be " + status)
-      waitForStatus(name, status, example)
-    case Left(error) =>
-      failure("error calling describe table => " + error.getClass.getName + ": " + error.message)
-  }
-
   "low level dynamo db" should {
-    
-	  "give a credentials error" in {
-		  implicit val credentials = AwsCredentials("fake", "credentials")
-				  LowLevelDynamoDb(CreateTableRequest("Test", KeySchema(Attribute("test", S)))).value.get must beLike {
-				  case Left(x: InvalidClientTokenIdException) => ok
-		  }
-	  }
+
+    "give a credentials error" in {
+      implicit val credentials = AwsCredentials("fake", "credentials")
+      LowLevelDynamoDb(CreateTableRequest("Test", KeySchema(Attribute("test", S)))).value.get must beLike {
+        case Left(x: InvalidClientTokenIdException) => ok
+      }
+    }
   }
   
   /*
@@ -50,7 +36,6 @@ object DynamoDbTableSpec extends Specification with Before {
   */
   "create table" should {
     println("create table")
-
     val createRequest = CreateTableRequest("Test", KeySchema(Attribute("test", S)))
 
     "create a Test table" in {
@@ -60,21 +45,32 @@ object DynamoDbTableSpec extends Specification with Before {
         case Right(CreateTableResponse(
           TableDescription("Test", CREATING, Some(x: Date),
             Some(KeySchema(Attribute("test", S), None)),
-            ProvisionedThroughput(5, 10, None, None)))) => ok
+            ProvisionedThroughput(5, 10, None, None), None, None))) => ok
       }
     }
 
-    "create a Test2 table" in {
-      println("create table - create a Test2 table")
+    "create a Test2 table and wait for it's creation" in {
+      println("create table - create a Test2 table and wait for it's creation")
 
-      LowLevelDynamoDb(CreateTableRequest("Test2", KeySchema(Attribute("string", S), Some(Attribute("number", N))))).value.get must beLike {
-        case Right(CreateTableResponse(
-          TableDescription("Test2", CREATING, Some(x: Date),
-            Some(KeySchema(Attribute("string", S), Some(Attribute("number", N)))),
-            ProvisionedThroughput(5, 10, None, None)))) => ok
-      }
+      val result = DynamoDb.createActiveTable(
+        "Test2",
+        KeySchema(Attribute("string", S), Some(Attribute("number", N))),
+        whileWaiting = Some(status => println("Found Test2 in status " + status + ", waiting")))
+        .await(60000).get must beLike {
+          case Right(
+            TableDescription("Test2", ACTIVE, Some(x: Date),
+              Some(KeySchema(Attribute("string", S), Some(Attribute("number", N)))),
+              ProvisionedThroughput(5, 10, None, None), Some(0), Some(0))) => {
+                println("Test2 table created")
+               ok 
+              }
+        }
 
+      println("moving to next test")
+      
+      result
     }
+    
     "return an exception when trying to create the same table" in {
       println("create table - return an exception when trying to create the same table")
 
@@ -104,14 +100,14 @@ object DynamoDbTableSpec extends Specification with Before {
       println("describe table - return information for Test")
 
       LowLevelDynamoDb(DescribeTableRequest("Test")).value.get must beLike {
-        case Right(DescribeTableResponse(Table("Test", _, _, _, _, _, _))) => ok
+        case Right(DescribeTableResponse(TableDescription("Test", _, _, _, _, _, _))) => ok
       }
     }
     "return information for Test2" in {
       println("describe table - return information for Test2")
 
       LowLevelDynamoDb(DescribeTableRequest("Test2")).value.get must beLike {
-        case Right(DescribeTableResponse(Table("Test2", _, _, _, _, _, _))) => ok
+        case Right(DescribeTableResponse(TableDescription("Test2", _, _, _, _, _, _))) => ok
       }
 
     }
@@ -123,21 +119,23 @@ object DynamoDbTableSpec extends Specification with Before {
     "wait for table to be active and update the throughput of Test table" in {
       println("update table - wait for table to be active and update the throughput of Test table")
 
-      waitForStatus("Test", ACTIVE, {
-        println("updating table")
-        LowLevelDynamoDb(UpdateTableRequest("Test", ProvisionedThroughput(10, 2))).value.get must beLike {
-          case Right(UpdateTableResponse(TableDescription("Test", UPDATING, _, _, ProvisionedThroughput(2, 2, Some(x), Some(y))))) => ok
+      DynamoDb.waitForTableStatus(
+        "Test",
+        ACTIVE,
+        whileWaiting = Some(status => println("Found table Test in state " + status + ", waiting")))
+        .await(60000).get must beLike {
+          case Right(t) => LowLevelDynamoDb(UpdateTableRequest("Test", ProvisionedThroughput(6, 3))).value.get must beLike {
+            case Right(UpdateTableResponse(TableDescription("Test", UPDATING, _, _, _, _, _))) => ok
+          }
         }
-      })
-      ok
     }
   }
 
   "delete table" should {
     println("delete table")
 
-    def deleteTable(name: String): Example = LowLevelDynamoDb(DeleteTableRequest(name)).value.get match {
-      case Right(DeleteTableResponse(TableDescription(_, DELETING, _, _, _))) => {
+    def deleteTable(name: String): MatchResult[_] = LowLevelDynamoDb(DeleteTableRequest(name)).value.get match {
+      case Right(DeleteTableResponse(TableDescription(_, DELETING, _, _, _, None, None))) => {
         println("deleted table " + name)
         ok
       }
@@ -145,27 +143,37 @@ object DynamoDbTableSpec extends Specification with Before {
       case Right(x) => failure("unexpected response from delete: " + x)
     }
 
-    "wait for Test1 table to be active using describe table and delete the table" in {
+    "wait for Test table to be active using describe table and delete the table" in {
       println("wait for Test1 table to be active using describe table and delete the table")
 
-      waitForStatus("Test", ACTIVE, deleteTable("Test"))
-      ok
-
+      DynamoDb.waitForTableStatus(
+        "Test",
+        ACTIVE,
+        whileWaiting = Some(status => println("Found table Test in state " + status + ", waiting")))
+        .await(60000).get must beLike {
+          case Right(t) => deleteTable(t.name)
+        }
     }
-    "wait for Test2 table to be active using describe table and delete the table" in {
-      println("wait for Test2 table to be active using describe table and delete the table")
 
-      waitForStatus("Test2", ACTIVE, deleteTable("Test2"))
-      ok
+    "delete the table Test2 table" in {
+      println("delete the table Test2 table")
+
+      DynamoDb.waitForTableStatus(
+        "Test2",
+        ACTIVE,
+        whileWaiting = Some(status => println("Found table Test2 in state " + status + ", waiting")))
+        .await(60000).get.fold(
+          error => failure(error.toString),
+          t => deleteTable("Test2"))
     }
   }
 
   "cleanup" should {
     println("cleanup")
     def checkRemoval(name: String): Example = LowLevelDynamoDb(DescribeTableRequest(name)).value.get match {
-      case Right(DescribeTableResponse(Table(_, status, _, _, _, _, _))) => status match {
+      case Right(DescribeTableResponse(TableDescription(_, status, _, _, _, _, _))) => status match {
         case DELETING => {
-          Thread sleep 1000
+          Thread sleep 3000
           println("waiting for table " + name + " to be removed")
           checkRemoval(name)
         }
@@ -182,11 +190,12 @@ object DynamoDbTableSpec extends Specification with Before {
       checkRemoval("Test")
       ok
     }
+
     "wait for table Test2 to have been deleted" in {
       println("waiting for table Test2 to have been deleted")
       checkRemoval("Test2")
       ok
     }
   }
-  
+
 }

@@ -58,15 +58,15 @@ object SupportModelsSpec extends Specification {
   "TableDescription" should {
     "be created from json" in {
       fromJson[TableDescription](parse("""{"CreationDateTime":1.310506263362E9,"KeySchema":{"HashKeyElement":{"AttributeName":"AttributeName1","AttributeType":"S"},"RangeKeyElement":{"AttributeName":"AttributeName2","AttributeType":"N"}},"ProvisionedThroughput":{"ReadCapacityUnits":5, "WriteCapacityUnits":10 },"TableName":"Table1","TableStatus":"CREATING"}""")) must beLike {
-        case TableDescription("Table1", CREATING, Some(d), Some(k: KeySchema), p: ProvisionedThroughput) if (d.getTime == (1.310506263362E9).toLong) => ok
+        case TableDescription("Table1", CREATING, Some(d), Some(k: KeySchema), p: ProvisionedThroughput, None, None) if (d.getTime == (1.310506263362E9).toLong) => ok
       }
     }
   }
 
   "Table" should {
     "be created from json" in {
-      fromJson[Table](parse("""{"CreationDateTime":1309988345.372,"ItemCount":1,"KeySchema":{"HashKeyElement":{"AttributeName":"AttributeName1","AttributeType":"S"},"RangeKeyElement":{"AttributeName":"AttributeName2","AttributeType":"N"}},"ProvisionedThroughput":{"LastIncreaseDateTime": 1.309988345372E9, "LastDecreaseDateTime": 1.309988345372E9, "ReadCapacityUnits":10,"WriteCapacityUnits":10},"TableName":"Table1","TableSizeBytes":1,"TableStatus":"ACTIVE"}""")) must beLike {
-        case Table("Table1", ACTIVE, Some(d), Some(1), Some(1), Some(y: KeySchema), z: ProvisionedThroughput) if (d.getTime == (1309988345.372).toLong) => ok
+      fromJson[TableDescription](parse("""{"CreationDateTime":1309988345.372,"ItemCount":1,"KeySchema":{"HashKeyElement":{"AttributeName":"AttributeName1","AttributeType":"S"},"RangeKeyElement":{"AttributeName":"AttributeName2","AttributeType":"N"}},"ProvisionedThroughput":{"LastIncreaseDateTime": 1.309988345372E9, "LastDecreaseDateTime": 1.309988345372E9, "ReadCapacityUnits":10,"WriteCapacityUnits":10},"TableName":"Table1","TableSizeBytes":1,"TableStatus":"ACTIVE"}""")) must beLike {
+        case TableDescription("Table1", ACTIVE, Some(d), Some(y: KeySchema), z: ProvisionedThroughput, Some(1), Some(1)) if (d.getTime == (1309988345.372).toLong) => ok
       }
     }
   }

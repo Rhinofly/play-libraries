@@ -21,18 +21,30 @@ object LowLevelDynamoDb {
   val version = "DynamoDB_20111205."
   val url = "https://dynamodb.us-east-1.amazonaws.com"
 
+  /**
+   * Creates session credentials from the given AwsCredentials
+   */
   def sessionCredentials(implicit credentials: AwsCredentials) = credentials match {
     case x: AwsSessionCredentials => x
     case x => AwsSessionCredentials(x)
   }
 
+  /**
+   * Implicit object for ContentTypeOf[String] used specifically by Amazon DynamoDb
+   */
   implicit object XAmzJson extends ContentTypeOf[String](Some("application/x-amz-json-1.0"))
 
+  /**
+   * Helper method to construct a response
+   */
   def response[T](response: Response)(implicit rds: Reads[T]): Either[DynamoDbException, T] = response.status match {
     case 200 => Right(response.json.as[T])
     case n => Left(response.json.as[DynamoDbException])
   }
 
+  /**
+   * Makes a post to the DynamoDb service
+   */
   def post[S, T](action: String, body: S, converter: Response => Either[DynamoDbException, T])(implicit wrt: Writes[S], credentials: AwsCredentials) =
     try {
       Aws

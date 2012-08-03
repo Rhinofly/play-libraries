@@ -4,6 +4,9 @@ import play.api.libs.json.{Format, JsValue, JsObject, Reads}
 import play.api.libs.json.Json.toJson
 import java.util.Date
 
+
+sealed abstract class TableStatus(val value: String)
+
 object TableStatus {
   implicit object TableStatusReads extends Reads[TableStatus] {
     def reads(json: JsValue) = json.as[String] match {
@@ -68,33 +71,19 @@ object KeySchema extends ((Attribute, Option[Attribute]) => KeySchema) {
   }
 }
 
-case class TableDescription(name: String, status: TableStatus, creationDate: Option[Date], keySchema: Option[KeySchema], provisionedThroughput: ProvisionedThroughput)
+case class TableDescription(name: String, status: TableStatus, creationDate: Option[Date], keySchema: Option[KeySchema], provisionedThroughput: ProvisionedThroughput, sizeBytes: Option[Long] = None, itemCount: Option[Int] = None)
 
-object TableDescription extends ((String, TableStatus, Option[Date], Option[KeySchema], ProvisionedThroughput) => TableDescription) {
+object TableDescription extends ((String, TableStatus, Option[Date], Option[KeySchema], ProvisionedThroughput, Option[Long], Option[Int]) => TableDescription) {
   implicit object TableDescriptionReads extends Reads[TableDescription] {
     def reads(json: JsValue) = TableDescription(
       (json \ "TableName").as[String],
       (json \ "TableStatus").as[TableStatus],
       (json \ "CreationDateTime").as[Option[Double]].map(x => new Date(x.toLong)),
       (json \ "KeySchema").as[Option[KeySchema]],
-      (json \ "ProvisionedThroughput").as[ProvisionedThroughput])
-
-  }
-}
-
-case class Table(name: String, status: TableStatus, creationDate: Option[Date], sizeBytes: Option[Long], itemCount: Option[Int], keySchema: Option[KeySchema], provisionedThroughput: ProvisionedThroughput)
-
-object Table extends ((String, TableStatus, Option[Date], Option[Long], Option[Int], Option[KeySchema], ProvisionedThroughput) => Table) {
-  implicit object TableReads extends Reads[Table] {
-    def reads(json: JsValue) = Table(
-      (json \ "TableName").as[String],
-      (json \ "TableStatus").as[TableStatus],
-      (json \ "CreationDateTime").as[Option[Double]].map(x => new Date(x.toLong)),
+      (json \ "ProvisionedThroughput").as[ProvisionedThroughput],
       (json \ "TableSizeBytes").as[Option[Long]],
-      (json \ "ItemCount").as[Option[Int]],
-      (json \ "KeySchema").as[Option[KeySchema]],
-      (json \ "ProvisionedThroughput").as[ProvisionedThroughput])
+       (json \ "ItemCount").as[Option[Int]])
+
   }
 }
 
-sealed abstract class TableStatus(val value: String)

@@ -29,11 +29,11 @@ object DeleteTableResponse extends (TableDescription => DeleteTableResponse) {
   }
 }
 
-case class DescribeTableResponse(table: Table)
+case class DescribeTableResponse(tableDescription: TableDescription)
 
-object DescribeTableResponse extends (Table => DescribeTableResponse) {
+object DescribeTableResponse extends (TableDescription => DescribeTableResponse) {
   implicit object DescribeTableResponseReads extends Reads[DescribeTableResponse] {
-    def reads(j: JsValue) = DescribeTableResponse((j \ "Table").as[Table])
+    def reads(j: JsValue) = DescribeTableResponse((j \ "Table").as[TableDescription])
   }
 }
 

@@ -67,7 +67,7 @@ object RequestResponseModelsSpec extends Specification {
 
   "DescribeTableResponse should be created from json" in {
     fromJson[DescribeTableResponse](parse("""{"Table":{"CreationDateTime":1.309988345372E9,"ItemCount":1,"KeySchema":{"HashKeyElement":{"AttributeName":"AttributeName1","AttributeType":"S"},"RangeKeyElement":{"AttributeName":"AttributeName2","AttributeType":"N"}},"ProvisionedThroughput":{"LastIncreaseDateTime": 1.309988345372E9, "LastDecreaseDateTime": 1.309988345372E9, "ReadCapacityUnits":10,"WriteCapacityUnits":10},"TableName":"Table1","TableSizeBytes":1,"TableStatus":"ACTIVE"}}""")) must beLike {
-      case DescribeTableResponse(x: Table) => ok
+      case DescribeTableResponse(x: TableDescription) => ok
     }
   }
 
