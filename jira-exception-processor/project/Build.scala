@@ -5,11 +5,11 @@ import PlayProject._
 object ApplicationBuild extends Build {
 
   val appName = "jira-exception-processor"
-  val appVersion = "1.0"
+  val appVersion = "1.0.1"
 
   val appDependencies = Seq(
-    "nl.rhinofly" %% "api-jira" % "1.0",
-    "nl.rhinofly" %% "api-ses" % "1.0")
+    "nl.rhinofly" %% "api-jira" % "1.0.1",
+    "nl.rhinofly" %% "api-ses" % "1.0.1")
 
   def rhinoflyRepo(version: String) = {
     val repo = if (version endsWith "SNAPSHOT") "snapshot" else "release"

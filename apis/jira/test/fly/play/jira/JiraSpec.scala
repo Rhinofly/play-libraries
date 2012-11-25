@@ -7,11 +7,31 @@ import play.api.test.FakeApplication
 import java.security.MessageDigest
 import org.apache.commons.codec.binary.Base64
 import java.util.Date
+import javax.net.ssl.TrustManager
+import javax.net.ssl.X509TrustManager
+import javax.net.ssl.SSLContext
 
 object JiraSpec extends Specification with Before {
   def f = FakeApplication(new java.io.File("./test/"))
 
-  def before = play.api.Play.start(f)
+  def before = {
+    // Create a trust manager that does not validate certificate chains
+    val trustAllCerts = Array[TrustManager](
+      new X509TrustManager() {
+        def getAcceptedIssuers(): Array[java.security.cert.X509Certificate] = null
+        def checkClientTrusted(
+          certs: Array[java.security.cert.X509Certificate], x:String): Unit = {}
+        def checkServerTrusted(
+          certs: Array[java.security.cert.X509Certificate], x:String): Unit = {}
+      })
+
+    // Install the all-trusting trust manager
+    val sc = SSLContext.getInstance("TLS");
+    sc.init(null, trustAllCerts, new java.security.SecureRandom());
+    SSLContext.setDefault(sc)
+
+    play.api.Play.start(f)
+  }
 
   "Jira" should {
     "obtain a token" in {
@@ -70,9 +90,9 @@ object JiraSpec extends Specification with Before {
 
     "add a comment" in {
       if (issueKey2.isEmpty) failure("No issue was created") else
-      Jira.addComment(issueKey2, "Automatic comment").value.get must_== Right(Success) 
+        Jira.addComment(issueKey2, "Automatic comment").value.get must_== Right(Success)
     }
-    
+
     "delete that issue" in {
       if (issueKey2.isEmpty) failure("No issue was created") else
         Jira.deleteIssue(issueKey2).value.get must_== Right(Success)
