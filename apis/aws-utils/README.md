@@ -62,7 +62,7 @@ Installation
 
 ``` scala
   val appDependencies = Seq(
-    "nl.rhinofly" %% "api-aws-utils" % "1.3"
+    "nl.rhinofly" %% "api-aws-utils" % "1.3.1"
   )
   
   val main = PlayProject(appName, appVersion, appDependencies, mainLang = SCALA).settings(

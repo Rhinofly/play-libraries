@@ -5,10 +5,10 @@ import PlayProject._
 object ApplicationBuild extends Build {
 
     val appName         = "api-aws-utils"
-    val appVersion      = "1.3"
+    val appVersion      = "1.3.1"
 
     val appDependencies = Seq(
-      "nl.rhinofly" %% "library-utils" % "1.0"
+      "nl.rhinofly" %% "library-utils" % "1.0.1"
     )
 
     

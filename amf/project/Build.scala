@@ -6,7 +6,7 @@ import scala.io.Source
 object ApplicationBuild extends Build {
 
   val appName = "amf"
-  val appVersion = "1.0"
+  val appVersion = "1.0.1"
 
   val appDependencies = Seq(
     "com.exadel.flamingo.flex" % "amf-serializer" % "1.5.0")

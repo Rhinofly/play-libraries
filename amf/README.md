@@ -20,7 +20,7 @@ Add the dependency:
 
 ``` scala
 	val appDependencies = Seq(
-      "nl.rhinofly" %% "amf" % "1.0"
+      "nl.rhinofly" %% "amf" % "1.0.1"
     )
 ```
 
