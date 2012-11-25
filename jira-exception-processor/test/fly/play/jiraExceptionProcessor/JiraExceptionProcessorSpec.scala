@@ -21,9 +21,8 @@ object JiraExceptionProcessorSpec extends Specification with Before {
 	  
 	  "send an email in case of an error while reporting" in {
 	    val e = Error(0, "Dit is een test om te kijken of er een mailtje verstuurd wordt wanneer er iets mis gaat met de automatische error reporting", Some("[fake stack trace]"))
-	    //JiraExceptionProcessor.sendEmail(e)
-	    //success
-	    pending
+	    JiraExceptionProcessor.sendEmail(e)
+	    success
 	  }
 	}
 }
