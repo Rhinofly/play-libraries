@@ -39,23 +39,23 @@ trait DefaultFormats {
 
   implicit object issueFormat extends Format[Issue] {
 
-    def readCustomValues(json: JsValue): Map[String, Seq[String]] = 
+    def readCustomValues(json: JsValue): Map[String, Seq[String]] =
       json match {
         case x: JsArray => x.as[Seq[JsObject]].map { c =>
          (c \ "customfieldId").as[String] -> (c \ "values").as[Seq[String]]
         }.toMap
         case x => throw new Exception("Can not read custom values: " + x)
       }
-    
+
     def writeCustomValues(customValues: Map[String, Seq[String]]): Option[JsValue] = {
-      val values = 
+      val values =
         customValues.toList.map {
           case (key, value) =>
             JsObject(List(
               "customfieldId" -> toJson(key),
               "values" -> toJson(value)))
         }
-      
+
       if (values.isEmpty) None else Some(toJson(values))
     }
 
@@ -72,8 +72,8 @@ trait DefaultFormats {
       "project" -> toJson(i.project),
       "summary" -> toJson(i.summary),
       "description" -> toJson(i.description)
-      ) 
-      ::: i.key.map("key" -> toJson(_)).toList 
+      )
+      ::: i.key.map("key" -> toJson(_)).toList
       ::: writeCustomValues(i.customFieldValues).map("customFieldValues" -> _).toList)
   }
 

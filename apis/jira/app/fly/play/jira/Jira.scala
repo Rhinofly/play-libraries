@@ -1,79 +1,74 @@
 package fly.play.jira
 
-import fly.play.libraryUtils.PlayConfiguration
-import play.api.libs.concurrent.Promise
 import play.api.Play.current
-import play.api.http.ContentTypeOf
-import play.api.libs.json.JsValue
-import play.api.libs.json.Json.{ toJson, fromJson }
-import play.api.libs.ws.Response
-import play.api.libs.ws.WS
-import play.api.libs.json.JsObject
-import play.api.libs.json.JsArray
-import play.api.libs.json.JsString
-import play.api.libs.json.Format
+import play.api.libs.concurrent.Promise
+import play.api.libs.json.{ Format, JsObject }
+import play.api.libs.json.Json.toJson
 import play.api.libs.json.Reads
-import play.api.libs.json.Json
+import play.api.libs.ws.{ Response, WS }
+
+import com.ning.http.client.Realm.AuthScheme
+import fly.play.libraryUtils.PlayConfiguration
 
 object Jira extends DefaultFormats {
 
   /**
    * The endpoint, for example: https://jira.rhinofly.net/rpc/json-rpc/jirasoapservice-v2/
    */
-  lazy val endpoint = PlayConfiguration("jira.endpoint")
+  val endpoint = PlayConfiguration("jira.endpoint")
+  val apiUsername = PlayConfiguration("jira.username")
+  val apiPassword = PlayConfiguration("jira.password")
 
-  //The default json content type is not accepted because it contains the encoding (blame Jira) 
-  implicit val contentType = new ContentTypeOf[JsValue](Some("application/json"))
-
-  def call[T](method: String, arguments: JsValue)(converter: JsValue => T): Promise[Either[Error, T]] = {
-    //println("call " + method + " arguments: " + Json.stringify(arguments))
+  protected def request(relativePath: String) = {
+    val completeUrl = endpoint + relativePath
+    println("Complete URL: %s" format completeUrl)
     WS
-      .url(endpoint + method)
-      .post(arguments)
-      .map { r =>
-        r.status match {
-          case 200 => r.json match {
-            case error: JsObject if (error \ "error").asOpt[JsObject] != None => Left(fromJson[Error](error))
-            case x => Right(converter(x))
-          }
-          case x => Left(Error(x, "Unknown error", None))
-        }
+    .url(completeUrl)
+    .withAuth(apiUsername, apiPassword, AuthScheme.BASIC)
+  }
+
+  def handleResponse[T](handler: PartialFunction[(Int, Response), Either[Error, T]])(response: Response): Either[Error, T] = {
+    val defaultHandler: PartialFunction[(Int, Response), Either[Error, T]] = {
+      case (400, response) => Left(response.json.as[Error])
+      case (other, response) => {
+        println(response.body)
+        Left(Error(other, "Unknown error", None))
+      }
+    }
+
+    (handler orElse defaultHandler)(response.status, response)
+  }
+
+  def addComment(issueKey: String, comment: String): Promise[Either[Error, Success]] = {
+    val body = JsObject(List(
+      "body" -> toJson(comment)))
+
+    request("issue/%s/comment" format issueKey).post(body) map handleResponse {
+      case (201, _) => Right(Success)
+    }
+  }
+
+  def findIssues(query: String): Promise[Either[Error, Seq[Issue]]] = findIssuesAs[Issue](query)
+
+  def findIssuesAs[T](query: String)(implicit reads: Reads[T]): Promise[Either[Error, Seq[T]]] = {
+    request("search")
+      .withQueryString("jql" -> query).get() map handleResponse {
+        case (200, response) => Right(response.json.as[Seq[T]])
       }
   }
 
-  def callWithToken[T](token: String, method: String, arguments: JsValue*)(converter: JsValue => T): Promise[Either[Error, T]] =
-    call(method, JsArray(JsString(token) +: arguments))(converter)
-
-  def callWithToken[T](token: Promise[Either[Error, String]], method: String, arguments: JsValue*)(converter: JsValue => T): Promise[Either[Error, T]] =
-    token.flatMap {
-      case Right(token) => callWithToken(token, method, arguments: _*)(converter)
+  def deleteIssue(issueKey: String): Promise[Either[Error, Success]] =
+    request("issue/%s" format issueKey).delete() map handleResponse {
+      case (204, _) => Right(Success)
     }
 
-  def callWithToken[T](method: String, arguments: JsValue*)(converter: JsValue => T): Promise[Either[Error, T]] =
-    callWithToken(token, method, arguments: _*)(converter)
+  def createIssue[T <: Issue](issue: T)(implicit format: Format[T]): Promise[Either[Error, T]] = {
+    val body = toJson(issue)
 
-  def token(username: String, password: String): Promise[Either[Error, String]] =
-    call("login", toJson(Seq(username, password)))(_.as[String])
-
-  def token: Promise[Either[Error, String]] =
-    token(PlayConfiguration("jira.username"), PlayConfiguration("jira.password"))
-
-  def createIssue[T <: Issue](issue: T)(implicit format: Format[T]): Promise[Either[Error, T]] =
-    callWithToken("createIssue", toJson(issue))(_.as[T])
-
-  def deleteIssue(issueKey: String): Promise[Either[Error, Success]] =
-    callWithToken("deleteIssue", toJson(issueKey))(json => Success)
-      //With a successful delete we get a 404... Jira bug
-      .map { case Left(Error(404, _, _)) => Right(Success) }
-
-  def findIssues(query: String): Promise[Either[Error, Seq[Issue]]] =
-    findIssuesAs[Issue](query)
-
-  def findIssuesAs[T <: Issue](query: String, maxResults: Int = 10)(implicit reads: Reads[T]): Promise[Either[Error, Seq[T]]] =
-    callWithToken("getIssuesFromJqlSearch", toJson(query), toJson(maxResults))(_.as[Seq[T]])
-
-  def addComment(issueKey: String, comment: String): Promise[Either[Error, Success]] =
-    callWithToken("addComment", toJson(issueKey), toJson(Map("body" -> toJson(comment))))(json => Success)
-      //With a successful add we get a 404... Jira bug
-      .map { case Left(Error(404, _, _)) => Right(Success) }
+    val theRequest = request("issue")
+    println("Request: " + theRequest)
+    theRequest.post(body) map handleResponse {
+      case (200, response) => Right(response.json.as[T])
+    }
+  }
 }
