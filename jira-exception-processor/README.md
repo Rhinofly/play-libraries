@@ -2,7 +2,7 @@ Jira exception processor module for Play 2.0.4
 ============================================
 
 This module is created for internal use. If there is any interest in this feature for play, please contact us so we 
-can make it more portable. Currently the two custom jira fields (Hash and Website) are hardcoded.
+can make it more portable.
 
 Installation
 ------------
@@ -25,24 +25,29 @@ Configuration
 In the `application.conf` file add the following pieces of information:
 
 ``` scala
-#Jira information, needed to report the errors to Jira
+# Jira information, needed to report the errors to Jira
 jira.username=username
-jira.password=password
-jira.endpoint="https://jira.company.net/rpc/json-rpc/jirasoapservice-v2/"
+jira.password="password"
+jira.endpoint="https://rhinofly.atlassian.net/rest/api/2/"
 
-#Mail configuration in case the reporting to Jira fails
+# Information needed by the exception processor
+jira.exceptionProcessor.enabled=true
+jira.exceptionProcessor.projectKey=PA
+jira.exceptionProcessor.componentName=tests
+# Hash is the default
+#jira.exceptionProcessor.hashCustomFieldName=Hash
+# 1 is the default (Bug)
+#jira.exceptionProcessor.issueType=1
+
+# Used when the connection to Jira failed, note that the error is also logged
 mail.from.name=Play application
 mail.from.address="noreply@rhinofly.net"
-mail.smtp.failTo="failto@rhinofly.net"
+mail.smtp.failTo="failto+test@rhinofly.net"
 
 mail.smtp.host=email-smtp.us-east-1.amazonaws.com
 mail.smtp.port=465
 mail.smtp.username="username"
 mail.smtp.password="password"
-
-#Information needed by the exception processor, note that enabled needs to be changed to true in production
-jira.play.website=website 
-jiraExceptionProcessor.enabled=false
 ```
 
 
@@ -60,6 +65,12 @@ object Global extends GlobalSettings {
 }
 ```
 
+Testing
+-------
+
+In order to test put the above configuration in `/test/conf/application.conf`. 
+Note that this directory is present in `.gitignore` in order to prevent credentials 
+from ending up in Github.
 
 
 
