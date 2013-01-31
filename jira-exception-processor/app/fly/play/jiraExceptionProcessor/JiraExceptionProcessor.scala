@@ -7,18 +7,16 @@ import fly.play.libraryUtils.PlayConfiguration
 import play.api.mvc.Session
 import play.api.Play.current
 import java.security.MessageDigest
-import fly.play.jira.Jira
-import fly.play.jira.Error
-import fly.play.jira.Success
 import fly.play.ses.Ses
 import fly.play.ses.Email
 import fly.play.ses.EmailAddress
 import fly.play.ses.Recipient
 import javax.mail.Message
 import play.api.PlayException
+import play.Logger
+import play.api.libs.concurrent.Promise
 
 object JiraExceptionProcessor {
-  lazy val website = PlayConfiguration("jira.play.website")
 
   def getStackTraceString(ex: Throwable): String = {
     val s = new StringWriter
@@ -45,27 +43,40 @@ object JiraExceptionProcessor {
   def keyValueSeq(key: String, value: Seq[String]): String = keyValue(key, value.mkString(", "))
 
   def reportError(request: RequestHeader, ex: Throwable): Unit = {
-	if (!PlayConfiguration("jiraExceptionProcessor.enabled").toBoolean) return
-    
+    if (!PlayConfiguration("jira.exceptionProcessor.enabled").toBoolean) return
+
+    val summary = ex.getMessage
+    val description = getStackTraceString(ex)
+
     val result: Either[Error, Success] = try {
-      val summary = ex.getMessage
-      val description = getStackTraceString(ex)
       val hash = createHash(description)
       val comment = getRequestString(request)
 
-      Jira.findIssuesAs[PlayProjectIssue]("project = PLAY AND Hash ~ " + hash + " AND Website = " + website + " ORDER BY priority DESC")
+      Jira.findIssues(hash)
         .flatMap {
           //we found an issue, add the comment
-          case Right(x) if (!x.isEmpty) => Jira.addComment(x.head.key.get, comment)
-          case Right(_) => Jira.createIssue(PlayProjectIssue(None, summary, description, website, hash)).flatMap {
-            case Right(playProjectIssue) => Jira.addComment(playProjectIssue.key.get, comment)
-          }
+          case Right(Some(issue)) => Jira.addComment(issue.key.get, comment)
+          //no issue found, create the issue
+          case Right(_) =>
+            (Jira createIssue PlayProjectIssue(None, Some(summary), Some(description), Some(hash)))
+              .flatMap {
+                //add the comment
+                case Right(playProjectIssue) => Jira.addComment(playProjectIssue.key.get, comment)
+                case Left(error) => Promise pure Left(error)
+              }
+          case Left(error) => Promise pure Left(error)
 
         }.value.get
 
     } catch {
-      case e:PlayException => throw e
-      case e => Left(Error(0, e.getMessage, Some(getStackTraceString(e))))
+      case e: PlayException => throw e
+      case e => Left(Error(0, Seq(
+        "Exception while calling Jira:",
+        e.getMessage,
+        getStackTraceString(e),
+        "Original error:",
+        summary,
+        description)))
     }
 
     result match {
@@ -75,12 +86,13 @@ object JiraExceptionProcessor {
   }
 
   def sendEmail(error: Error) = {
-    val message = error.code + "\n" +
-      error.message + "\n\n" +
-      error.data.getOrElse("")
+    val message = "Status: " + error.status + "\n" +
+      error.messages.mkString("\n\n")
+
+    Logger error "Failed to report to Jira " + message
 
     Ses.sendEmail(Email(
-      subject = "Failed to report error",
+      subject = "Failed to report error for project %s and component %s" format (Jira.projectKey, Jira.componentName),
       from = EmailAddress(PlayConfiguration("mail.from.name"), PlayConfiguration("mail.from.address")),
       replyTo = None,
       recipients = List(Recipient(Message.RecipientType.TO, EmailAddress("Play", "play+error@rhinofly.nl"))),
