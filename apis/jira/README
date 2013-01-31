@@ -1,3 +1,0 @@
-This library created with the sole purpose of providing Jira support for the jira-exception-processor.
-
-Only the necessary methods are implemented. If you are interested you can see the use cases in the specification in the test directory.
