@@ -91,11 +91,17 @@ object JiraExceptionProcessor {
 
     Logger error "Failed to report to Jira " + message
 
+    val fromName = PlayConfiguration("jira.exceptionProcessor.mail.from.name")
+    val fromAddress = PlayConfiguration("jira.exceptionProcessor.mail.from.address")
+    val toName = PlayConfiguration("jira.exceptionProcessor.mail.to.name")
+    val toAddress = PlayConfiguration("jira.exceptionProcessor.mail.to.address")
+    
     Ses.sendEmail(Email(
       subject = "Failed to report error for project %s and component %s" format (Jira.projectKey, Jira.componentName),
-      from = EmailAddress(PlayConfiguration("mail.from.name"), PlayConfiguration("mail.from.address")),
+      from = EmailAddress(fromName, fromAddress),
       replyTo = None,
-      recipients = List(Recipient(Message.RecipientType.TO, EmailAddress("Play", "play+error@rhinofly.nl"))),
+      recipients = List(
+        Recipient(Message.RecipientType.TO, EmailAddress(toName, toAddress))),
       text = message,
       htmlText = message.replace("\n", "<br />"),
       attachments = Seq.empty))

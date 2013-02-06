@@ -11,7 +11,7 @@ In the `Build.scala` file add the dependency
 
 ``` scala
   val appDependencies = Seq(
-    "nl.rhinofly" %% "jira-exception-processor" % "2.0.0")
+    "nl.rhinofly" %% "jira-exception-processor" % "2.0.1")
 
   val main = PlayProject(appName, appVersion, appDependencies, mainLang = SCALA).settings(
     resolvers += "Rhinofly Internal Repository" at "http://maven-repository.rhinofly.net:8081/artifactory/libs-release-local")
@@ -40,8 +40,12 @@ jira.exceptionProcessor.componentName=tests
 #jira.exceptionProcessor.issueType=1
 
 # Used when the connection to Jira failed, note that the error is also logged
-mail.from.name=Play application
-mail.from.address="noreply@rhinofly.net"
+jira.exceptionProcessor.mail.from.name=Play application
+jira.exceptionProcessor.mail.from.address="noreply@rhinofly.net"
+jira.exceptionProcessor.mail.to.name=Play
+jira.exceptionProcessor.mail.to.address="play+error@rhinofly.nl"
+
+# Used by the SES plugin
 mail.smtp.failTo="failto+test@rhinofly.net"
 
 mail.smtp.host=email-smtp.us-east-1.amazonaws.com
