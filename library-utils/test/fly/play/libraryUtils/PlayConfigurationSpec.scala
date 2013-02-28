@@ -7,7 +7,7 @@ import play.api.PlayException
 import java.io.File
 
 object PlayConfigurationSpec extends Specification with Before {
-	def before = play.api.Play.start(FakeApplication(new File("./test")))
+	def before = play.api.Play.start(FakeApplication(path=new File("./test"),additionalConfiguration = Map("test.existingKey" -> "Fake value")))
   
 	"PlayConfiguration(test.existingKey)" should {
 	  "return 'Fake value'" in {

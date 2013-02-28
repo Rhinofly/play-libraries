@@ -22,9 +22,9 @@ object Aws4SignerSpec extends Specification {
 
     "create the correct canonical request and signed headers" in {
 
-      val queryString = Map("Version" -> "2011-06-15",
-        "Action" -> "GetSessionToken",
-        "DurationSeconds" -> "3600")
+      val queryString = Map("Version" -> Seq("2011-06-15"),
+        "Action" -> Seq("GetSessionToken"),
+        "DurationSeconds" -> Seq("3600"))
 
       val headers = Map(
         "Host" -> Seq("sts.amazonaws.com"),

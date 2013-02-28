@@ -27,7 +27,7 @@ object Aws3SignerSpec extends Specification {
 
     "create the correct canonical request and signed headers" in {
 
-      val queryString = Map[String, String]()
+      val queryString = Map[String, Seq[String]]()
 
       val headers = Map(
         "Host" -> Seq("dynamodb.us-east-1.amazonaws.com"),
@@ -54,11 +54,11 @@ object Aws3SignerSpec extends Specification {
       }
 
     }
-    
+
     def getBytes[T](value:T)(implicit wrt: Writeable[T]):Array[Byte] = wrt transform value
 
     "should be able to handle a zero length string" in {
-      val queryString = Map[String, String]()
+      val queryString = Map[String, Seq[String]]()
 
       val headers = Map(
         "Host" -> Seq("dynamodb.us-east-1.amazonaws.com"),

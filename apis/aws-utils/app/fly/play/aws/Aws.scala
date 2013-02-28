@@ -3,7 +3,6 @@ package fly.play.aws
 import play.api.libs.ws.WS
 import play.api.http.Writeable
 import play.api.http.ContentTypeOf
-import play.api.libs.concurrent.Promise
 import play.api.libs.ws.Response
 import play.api.libs.ws.ResponseHeaders
 import play.api.libs.iteratee.Iteratee
@@ -15,6 +14,7 @@ import fly.play.aws.auth.Signer
 import play.api.libs.ws.SignatureCalculator
 import java.util.Locale
 import fly.play.aws.auth.Aws3Signer
+import concurrent.Future
 
 /**
  * Amazon Web Services
@@ -24,13 +24,13 @@ object Aws {
   object EnableRedirects extends SignatureCalculator {
     def sign(request:WS.WSRequest) = request setFollowRedirects true
   }
-  
+
   def withSigner3(credentials: AwsCredentials): AwsRequestBuilder =
 		  withSigner3(Some(credentials))
-	
+
   def withSigner3(credentials: Option[AwsCredentials] = None): AwsRequestBuilder =
     withSigner(Aws3Signer(credentials getOrElse AwsCredentials.fromConfiguration))
-		  
+
   def withSigner4(credentials: AwsCredentials): AwsRequestBuilder =
     withSigner4(Some(credentials))
 
@@ -57,34 +57,34 @@ object Aws {
     def sign[T](method: String, body: T)(implicit wrt: Writeable[T], ct: ContentTypeOf[T]) =
       signer.sign(wrappedRequest, method, body)
 
-    def get(): Promise[Response] =
+    def get(): Future[Response] =
       sign("GET").get
 
-    def get[A](consumer: ResponseHeaders => Iteratee[Array[Byte], A]): Promise[Iteratee[Array[Byte], A]] =
+    def get[A](consumer: ResponseHeaders => Iteratee[Array[Byte], A]): Future[Iteratee[Array[Byte], A]] =
       sign("GET").get(consumer)
 
-    def post[T](body: T)(implicit wrt: Writeable[T], ct: ContentTypeOf[T]): Promise[Response] = 
+    def post[T](body: T)(implicit wrt: Writeable[T], ct: ContentTypeOf[T]): Future[Response] =
       sign("POST", body).post(body)
 
-    def postAndRetrieveStream[A, T](body: T)(consumer: ResponseHeaders => Iteratee[Array[Byte], A])(implicit wrt: Writeable[T], ct: ContentTypeOf[T]): Promise[Iteratee[Array[Byte], A]] =
+    def postAndRetrieveStream[A, T](body: T)(consumer: ResponseHeaders => Iteratee[Array[Byte], A])(implicit wrt: Writeable[T], ct: ContentTypeOf[T]): Future[Iteratee[Array[Byte], A]] =
       sign("POST", body).postAndRetrieveStream(body)(consumer)
 
-    def put[T](body: T)(implicit wrt: Writeable[T], ct: ContentTypeOf[T]): Promise[Response] =
+    def put[T](body: T)(implicit wrt: Writeable[T], ct: ContentTypeOf[T]): Future[Response] =
       sign("PUT", body).put(body)
 
-    def put:Promise[Response] = 
+    def put:Future[Response] =
       put("")
-      
-    def putAndRetrieveStream[A, T](body: T)(consumer: ResponseHeaders => Iteratee[Array[Byte], A])(implicit wrt: Writeable[T], ct: ContentTypeOf[T]): Promise[Iteratee[Array[Byte], A]] =
+
+    def putAndRetrieveStream[A, T](body: T)(consumer: ResponseHeaders => Iteratee[Array[Byte], A])(implicit wrt: Writeable[T], ct: ContentTypeOf[T]): Future[Iteratee[Array[Byte], A]] =
       sign("PUT", body).putAndRetrieveStream(body)(consumer)
 
-    def delete(): Promise[Response] =
+    def delete(): Future[Response] =
       sign("DELETE").delete
 
-    def head(): Promise[Response] =
+    def head(): Future[Response] =
       sign("HEAD").head
 
-    def options(): Promise[Response] =
+    def options(): Future[Response] =
       sign("OPTIONS").options
 
   }

@@ -9,5 +9,5 @@ object PlayConfiguration {
    * a PlayException when the key could not be found.
    */
   def apply(key: String)(implicit app: Application): String =
-    app.configuration.getString(key).getOrElse(throw PlayException("Configuration error", "Could not find " + key + " in settings"))
+    app.configuration.getString(key).getOrElse(throw new PlayException("Configuration error", "Could not find " + key + " in settings"))
 }
