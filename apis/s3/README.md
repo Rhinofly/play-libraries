@@ -1,3 +1,5 @@
+Note that a new version for Play 2.1 can be found here: https://github.com/Rhinofly/play-s3
+
 Amazon Simple Storage Service (S3) module for Play 2.0
 =====================================================
 
