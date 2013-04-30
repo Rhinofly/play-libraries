@@ -5,7 +5,7 @@ Each new project we start is being developed in Scala. Therefore, we are in need
 Are you the Scala programmer we are looking for? Take a look at the [job description](http://rhinofly.nl/vacature-scala.html) (in Dutch) and give the Scala puzzle a try! Send us your solution and you will be invited for a job interview.
 * * *
 
-This project contains a set of libraries that can be used with Play Framework 2.0. We are currently only focussing on the Scala side of things.
+This project contains a set of libraries that can be used with Play Framework 2.0. We are currently only focusing on the Scala side of things.
 
 Currently most of these libraries are under development. Each time a stable version is finished it is published to the release repository at http://maven-repository.rhinofly.net:8081/artifactory/libs-release-local. Latest development versions can be obtained from the snapshot repository at http://maven-repository.rhinofly.net:8081/artifactory/libs-snapshot-local.
 
