@@ -5,7 +5,7 @@ import PlayProject._
 object ApplicationBuild extends Build {
 
   val appName = "api-s3"
-  val appVersion = "1.7.0"
+  val appVersion = "1.7.2"
 
   val appDependencies = Seq(
     "nl.rhinofly" %% "api-aws-utils" % "1.4.0")
@@ -21,7 +21,7 @@ object ApplicationBuild extends Build {
     publishTo <<= version(rhinoflyRepo),
     credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
 	scalacOpts)
-	
+
   lazy val scalacOpts = scalacOptions ++= Seq("-encoding", "UTF-8", "-unchecked", "-deprecation", "-feature")
 
 }
