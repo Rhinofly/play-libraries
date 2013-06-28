@@ -162,6 +162,36 @@ object S3 {
       .post("")
   }
 
+  /**
+   * Low level method to upload a multipart request
+   *
+   * @param bucketName
+   * @param fileName
+   * @param uploadId
+   * @param partNumber
+   * @param content
+   *
+   * @see  Bucket.uploadPart
+   */
+  def uploadPart(bucketName: String, fileName: String, uploadId: String, partNumber: Int, content: Array[Byte])(implicit credentials: AwsCredentials): Future[Response] = {
+    // TODO
+  }
+
+  /**
+   * Low level method to complete a multipart request
+   *
+   * @param bucketName
+   * @param fileName
+   * @param uploadId
+   * @param parts
+   * @param credentials
+   *
+   * @see Bucket.completeMultipartUpload
+   */
+  def completeMultipartUpload(bucketName: String, fileName: String, uploadId: String, parts: List[MultipartItem])(implicit credentials: AwsCredentials): Future[Response] = {
+    // TODO
+  }
+
 }
 
 case class Success()
@@ -186,6 +216,41 @@ case class Bucket(
   def initiateMultipartUpload(fileName: String): Future[Either[AwsError, String]] = {
     import play.api.libs.concurrent.Execution.Implicits._
     S3.initiateMultipartUpload(name, fileName) map initateMultipartResponse
+  }
+
+  /**
+   * Uploads a part of the previously initiated multipart upload
+   *
+   * @param partNumber Number of the part being uploaded (can be between 1, 10000)
+   * @param uploadId ID received from the initiate multipart upload call
+   * @param content part being uploaded, must be below 5MB
+   *
+   * @see initiateMultipartUpload
+   */
+  def uploadPart(fileName: String, partNumber: Int, uploadId: String, content: Array[Byte]): Future[Either[AwsError, MultipartItem]] = {
+    AwsResponse
+    /* TODO
+    PUT call
+    Return an object with the part number and Etag
+    MultipartItem
+     */
+  }
+
+  /**
+   * Finalizes the uploading for the multipart request
+   * (after the parts have been uploaded)
+   *
+   * @param uploadId ID received from the initiate multipart upload call
+   * @param parts List of the parts which have been uploaded, used the make the body for
+   *              the request
+   *
+   * @see initiateMultipartUpload, uploadPart
+   */
+  def completeMultipartUpload(fileName: String, uploadId: String, parts: List[MultipartItem]): Future[Either[AwsError, String]] {
+    /* TODO
+    * Post call
+    * return the URL
+    * */
   }
 
   /**
@@ -302,6 +367,13 @@ case class Bucket(
  * Representation of an element in a bucket as the result of a call to the list method
  */
 case class BucketItem(name: String, isVirtual: Boolean)
+
+/**
+ * Representation of a part which has already been uploaded. Used to collect all the parts
+ * in the end (for the complete call.
+ */
+case class MultipartItem(partNumber: Int, eTag: String)
+
 /**
  * Representation of a file, used in get and add methods of the bucket
  */
