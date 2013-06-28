@@ -54,13 +54,12 @@ case class S3Signer(credentials: AwsCredentials) extends Signer with SignerUtils
       case x => throw new Exception("Could not extract the bucket name from " + x)
     }
 
-    var query = request.queryString.map {
-      case(key, value) => value match {
-        case Nil  => key // If there is no value for the key
-        case _ => key + "=" + value(0)
-    }}.mkString("&").dropRight(1) // remove the last &
+    val query = request.queryString.map {
+      case emptySeq @ (key, value) if(value.isEmpty || value(0).isEmpty) => key
+      case other @ (key, value) => key + "=" + value.head
+    }.mkString("&")
 
-    var urlQuery = query match {
+    val urlQuery = query match {
       case "" => query // if the query is empty, return that
       case _ => "?" + query // if there are parameters add the ?
     }
