@@ -174,7 +174,14 @@ object S3 {
    * @see  Bucket.uploadPart
    */
   def uploadPart(bucketName: String, fileName: String, uploadId: String, partNumber: Int, content: Array[Byte])(implicit credentials: AwsCredentials): Future[Response] = {
-    // TODO
+    Aws
+      .withSigner(S3Signer(credentials))
+      .url(httpUrl(bucketName, fileName))
+      .withQueryString(
+        ("partNumber" -> partNumber.toString),
+        ("uploadId" -> uploadId)
+      )
+      .put(content)
   }
 
   /**
@@ -188,9 +195,9 @@ object S3 {
    *
    * @see Bucket.completeMultipartUpload
    */
-  def completeMultipartUpload(bucketName: String, fileName: String, uploadId: String, parts: List[MultipartItem])(implicit credentials: AwsCredentials): Future[Response] = {
-    // TODO
-  }
+//  def completeMultipartUpload(bucketName: String, fileName: String, uploadId: String, parts: List[MultipartItem])(implicit credentials: AwsCredentials): Future[Response] = {
+//    // TODO
+//  }
 
 }
 
@@ -228,17 +235,17 @@ case class Bucket(
    * @see initiateMultipartUpload
    */
   def uploadPart(fileName: String, partNumber: Int, uploadId: String, content: Array[Byte]): Future[Either[AwsError, MultipartItem]] = {
-    AwsResponse
-    /* TODO
-    PUT call
-    Return an object with the part number and Etag
-    MultipartItem
-     */
+    import play.api.libs.concurrent.Execution.Implicits._
+    S3.uploadPart(name, fileName, uploadId, partNumber, content) map AwsResponse { (status, response) =>
+      val headers = extractHeaders(response)
+      play.Logger.info("Response headers" + headers)
+      MultipartItem(partNumber, headers.get("ETag").get)
+    }
   }
 
   /**
    * Finalizes the uploading for the multipart request
-   * (after the parts have been uploaded)
+   * (after the parts have been uploaded) and returns the URL
    *
    * @param uploadId ID received from the initiate multipart upload call
    * @param parts List of the parts which have been uploaded, used the make the body for
@@ -246,12 +253,12 @@ case class Bucket(
    *
    * @see initiateMultipartUpload, uploadPart
    */
-  def completeMultipartUpload(fileName: String, uploadId: String, parts: List[MultipartItem]): Future[Either[AwsError, String]] {
-    /* TODO
-    * Post call
-    * return the URL
-    * */
-  }
+//  def completeMultipartUpload(fileName: String, uploadId: String, parts: List[MultipartItem]): Future[Either[AwsError, String]] {
+//    /* TODO
+//    * Post call
+//    * return the URL
+//    * */
+//  }
 
   /**
    * Creates an authenticated url for an item with the given name
@@ -269,15 +276,7 @@ case class Bucket(
    */
   def get(itemName: String)(implicit executionContext:ExecutionContext): Future[Either[AwsError, BucketFile]] =
     S3.get(name, Some(itemName), None, None) map AwsResponse { (status, response) =>
-      //implicits
-      import JavaConversions.mapAsScalaMap
-      import JavaConversions.asScalaBuffer
-
-      val headers =
-        for {
-          (key, value) <- response.ahcResponse.getHeaders.toMap
-          if (value.size > 0)
-        } yield key -> value.head
+      val headers = extractHeaders(response)
 
       BucketFile(itemName,
           headers("Content-Type"),
@@ -361,6 +360,17 @@ case class Bucket(
     }_
 
   private def successResponse = AwsResponse { (status, response) => Success() }_
+
+  private def extractHeaders(response: Response): Map[String, String]= {
+    //implicits
+    import JavaConversions.mapAsScalaMap
+    import JavaConversions.asScalaBuffer
+
+    for {
+      (key, value) <- response.ahcResponse.getHeaders.toMap
+      if (value.size > 0)
+    } yield key -> value.head
+  }
 }
 
 /**
