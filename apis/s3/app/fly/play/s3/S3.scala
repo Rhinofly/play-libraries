@@ -66,27 +66,6 @@ object S3 {
   }
 
   /**
-   * Lowlevel method to call get on a bucket or a specific file
-   *
-   * @param bucketName	The name of the bucket
-   * @param path		The path that you want to call the get on, default is "" (empty string).
-   * 					This is mostly used to retrieve single files
-   * @param prefix		A prefix that is most commonly used to list the contents of a 'directory'
-   * @param delimiter	A delimiter that is used to distinguish 'directories'
-   *
-   * @see Bucket.get
-   * @see Bucket.list
-   */
-  def get(bucketName: String, path: Option[String], prefix: Option[String], delimiter: Option[String])(implicit credentials: AwsCredentials): Future[Response] =
-    Aws
-      .withSigner(S3Signer(credentials))
-      .url(httpUrl(bucketName, path.getOrElse("")))
-      .withQueryString(
-        (prefix.map("prefix" -> _).toList :::
-          delimiter.map("delimiter" -> _).toList): _*)
-      .get
-
-  /**
    * Lowlevel method to call delete on a bucket in order to delete a file
    *
    * @param bucketName	The name of the bucket
@@ -145,6 +124,44 @@ object S3 {
       .put
   }
 
+  /**
+   * Lowlevel method to call get on a bucket or a specific file
+   *
+   * @param bucketName  The name of the bucket
+   * @param path    The path that you want to call the get on, default is "" (empty string).
+   *          This is mostly used to retrieve single files
+   * @param prefix    A prefix that is most commonly used to list the contents of a 'directory'
+   * @param delimiter A delimiter that is used to distinguish 'directories'
+   *
+   * @see Bucket.get
+   * @see Bucket.list
+   */
+  def get(bucketName: String, path: Option[String], prefix: Option[String], delimiter: Option[String])(implicit credentials: AwsCredentials): Future[Response] =
+    Aws
+      .withSigner(S3Signer(credentials))
+      .url(httpUrl(bucketName, path.getOrElse("")))
+      .withQueryString(
+        (prefix.map("prefix" -> _).toList :::
+          delimiter.map("delimiter" -> _).toList): _*)
+      .get
+
+
+  /**
+   * Low level method to initiate the multipart request for a specific file
+   *
+   * @param bucketName The name of the bucket
+   * @param fileName the path of the file being uploaded
+   *
+   * @see Bucket.initiateMultipartUpload
+   */
+  def initiateMultipartUpload(bucketName: String, fileName: String)(implicit credentials: AwsCredentials): Future[Response] = {
+    Aws
+      .withSigner(S3Signer(credentials))
+      .url(httpUrl(bucketName, fileName))
+      .withQueryString("uploads" -> "")
+      .post("")
+  }
+
 }
 
 case class Success()
@@ -159,6 +176,17 @@ case class Success()
 case class Bucket(
   name: String,
   delimiter: Option[String] = Some("/"))(implicit val credentials: AwsCredentials) {
+
+  /**
+   * Initiates the multipart request, where it gets the uploadId before the parts
+   * can be uploaded
+   *
+   * @param fileName The path of the file to be uploaded
+   */
+  def initiateMultipartUpload(fileName: String): Future[Either[AwsError, String]] = {
+    import play.api.libs.concurrent.Execution.Implicits._
+    S3.initiateMultipartUpload(name, fileName) map initateMultipartResponse
+  }
 
   /**
    * Creates an authenticated url for an item with the given name
@@ -186,10 +214,10 @@ case class Bucket(
           if (value.size > 0)
         } yield key -> value.head
 
-      BucketFile(itemName, 
-          headers("Content-Type"), 
-          response.ahcResponse.getResponseBodyAsBytes, 
-          None, 
+      BucketFile(itemName,
+          headers("Content-Type"),
+          response.ahcResponse.getResponseBodyAsBytes,
+          None,
           Some(headers))
     }
 
@@ -259,9 +287,15 @@ case class Bucket(
 
       /* files */ (xml \ "Contents").map(n => BucketItem(n \ "Key" text, false)) ++
         /* folders */ (xml \ "CommonPrefixes").map(n => BucketItem(n \ "Prefix" text, true))
-    } _
+    }_
 
-  private def successResponse = AwsResponse { (status, response) => Success() } _
+  private def initateMultipartResponse =
+    AwsResponse { (status, response) =>
+      val xml = response.xml
+      (xml \ "UploadId").text // extract the UploadId value from the XMLK
+    }_
+
+  private def successResponse = AwsResponse { (status, response) => Success() }_
 }
 
 /**
