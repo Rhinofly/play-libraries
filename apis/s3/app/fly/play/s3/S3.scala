@@ -165,11 +165,11 @@ object S3 {
   /**
    * Low level method to upload a multipart request
    *
-   * @param bucketName
-   * @param fileName
-   * @param uploadId
-   * @param partNumber
-   * @param content
+   * @param bucketName The name of the bucket
+   * @param fileName path of the file being uploaded (to)
+   * @param uploadId ID for the upload session (got from initiateMultipartUpload)
+   * @param partNumber the number of the part being uploaded
+   * @param content The bytes for the content being uploaded
    *
    * @see  Bucket.uploadPart
    */
@@ -187,11 +187,11 @@ object S3 {
   /**
    * Low level method to complete a multipart request
    *
-   * @param bucketName
-   * @param fileName
-   * @param uploadId
-   * @param parts
-   * @param credentials
+   * @param bucketName The name of the bucket
+   * @param fileName path of the file being uploaded
+   * @param uploadId ID for the upload session (got from initiateMultipartUpload)
+   * @param parts XML for all the part numbers and their Etags, for more info check out
+   *              http://docs.aws.amazon.com/AmazonS3/latest/API/mpUploadComplete.html
    *
    * @see Bucket.completeMultipartUpload
    */
@@ -238,7 +238,7 @@ case class Bucket(
    *
    * @param partNumber Number of the part being uploaded (can be between 1, 10000)
    * @param uploadId ID received from the initiate multipart upload call
-   * @param content part being uploaded, must be atleast 5MB
+   * @param content part being uploaded, must be atleast 5MB (5242880 bytes)
    *
    * @see initiateMultipartUpload
    */
@@ -264,7 +264,6 @@ case class Bucket(
     import play.api.libs.concurrent.Execution.Implicits._ // need to import this otherwise compile error, not sure why yet.
     S3.completeMultipartUpload(name, fileName, uploadId, parts) map AwsResponse { (status, response) =>
       val xml = response.xml
-      play.Logger.info(response.body.toString);
       (xml \ "Location").text // extract the Location value from the XML
     }
   }
