@@ -195,9 +195,14 @@ object S3 {
    *
    * @see Bucket.completeMultipartUpload
    */
-//  def completeMultipartUpload(bucketName: String, fileName: String, uploadId: String, parts: List[MultipartItem])(implicit credentials: AwsCredentials): Future[Response] = {
-//    // TODO
-//  }
+  def completeMultipartUpload(bucketName: String, fileName: String, uploadId: String, parts: List[MultipartItem])(implicit credentials: AwsCredentials): Future[Response] = {
+    val body = <CompleteMultipartUpload>{ parts.map(part => part.toXml) }</CompleteMultipartUpload>
+    Aws
+      .withSigner(S3Signer(credentials))
+      .url(httpUrl(bucketName, fileName))
+      .withQueryString(("uploadId" -> uploadId))
+      .post(body)
+  }
 
 }
 
@@ -206,7 +211,7 @@ case class Success()
 /**
  * Representation of a bucket
  *
- * @param bucketName	The name of the bucket needed to create a Bucket representation
+ * @param name	The name of the bucket needed to create a Bucket representation
  * @param delimiter		A delimiter to use for this Bucket instance, default is a / (slash)
  *
  */
@@ -222,7 +227,10 @@ case class Bucket(
    */
   def initiateMultipartUpload(fileName: String): Future[Either[AwsError, String]] = {
     import play.api.libs.concurrent.Execution.Implicits._
-    S3.initiateMultipartUpload(name, fileName) map initateMultipartResponse
+    S3.initiateMultipartUpload(name, fileName) map AwsResponse { (status, response) =>
+      val xml = response.xml
+      (xml \ "UploadId").text // extract the UploadId value from the XMLK
+    }
   }
 
   /**
@@ -230,15 +238,14 @@ case class Bucket(
    *
    * @param partNumber Number of the part being uploaded (can be between 1, 10000)
    * @param uploadId ID received from the initiate multipart upload call
-   * @param content part being uploaded, must be below 5MB
+   * @param content part being uploaded, must be atleast 5MB
    *
    * @see initiateMultipartUpload
    */
   def uploadPart(fileName: String, partNumber: Int, uploadId: String, content: Array[Byte]): Future[Either[AwsError, MultipartItem]] = {
-    import play.api.libs.concurrent.Execution.Implicits._
+    import play.api.libs.concurrent.Execution.Implicits._ // need to import this otherwise compile error, not sure why yet.
     S3.uploadPart(name, fileName, uploadId, partNumber, content) map AwsResponse { (status, response) =>
       val headers = extractHeaders(response)
-      play.Logger.info("Response headers" + headers)
       MultipartItem(partNumber, headers.get("ETag").get)
     }
   }
@@ -253,12 +260,14 @@ case class Bucket(
    *
    * @see initiateMultipartUpload, uploadPart
    */
-//  def completeMultipartUpload(fileName: String, uploadId: String, parts: List[MultipartItem]): Future[Either[AwsError, String]] {
-//    /* TODO
-//    * Post call
-//    * return the URL
-//    * */
-//  }
+  def completeMultipartUpload(fileName: String, uploadId: String, parts: List[MultipartItem]): Future[Either[AwsError, String]] = {
+    import play.api.libs.concurrent.Execution.Implicits._ // need to import this otherwise compile error, not sure why yet.
+    S3.completeMultipartUpload(name, fileName, uploadId, parts) map AwsResponse { (status, response) =>
+      val xml = response.xml
+      play.Logger.info(response.body.toString);
+      (xml \ "Location").text // extract the Location value from the XML
+    }
+  }
 
   /**
    * Creates an authenticated url for an item with the given name
@@ -353,12 +362,6 @@ case class Bucket(
         /* folders */ (xml \ "CommonPrefixes").map(n => BucketItem(n \ "Prefix" text, true))
     }_
 
-  private def initateMultipartResponse =
-    AwsResponse { (status, response) =>
-      val xml = response.xml
-      (xml \ "UploadId").text // extract the UploadId value from the XMLK
-    }_
-
   private def successResponse = AwsResponse { (status, response) => Success() }_
 
   private def extractHeaders(response: Response): Map[String, String]= {
@@ -382,7 +385,9 @@ case class BucketItem(name: String, isVirtual: Boolean)
  * Representation of a part which has already been uploaded. Used to collect all the parts
  * in the end (for the complete call.
  */
-case class MultipartItem(partNumber: Int, eTag: String)
+case class MultipartItem(partNumber: Int, eTag: String) {
+  def toXml = <Part><PartNumber>{partNumber}</PartNumber><ETag>{eTag}</ETag></Part>
+}
 
 /**
  * Representation of a file, used in get and add methods of the bucket
