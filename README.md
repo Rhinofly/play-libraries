@@ -1,4 +1,4 @@
-# Update: The S3 library now supports multipart upload
+#### Update: The S3 library now supports multipart upload
 
 This project contains a set of libraries that can be used with Play Framework 2.0. We are currently only focussing on the Scala side of things.
 
