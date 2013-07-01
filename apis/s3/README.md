@@ -1,6 +1,8 @@
 Amazon Simple Storage Service (S3) module for Play 2.0
 =====================================================
 
+#### Also supports S3 multipart upload now
+
 A minimal S3 API wrapper. Allows you to list, get, add and remove items from a bucket.
 
 
