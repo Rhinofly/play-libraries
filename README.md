@@ -1,3 +1,6 @@
+
+## Update: The S3 library now supports mulipart support
+
 This project contains a set of libraries that can be used with Play Framework 2.0. We are currently only focussing on the Scala side of things.
 
 Currently most of these libraries are under development. Each time a stable version is finished it is published to the release repository at http://maven-repository.rhinofly.net:8081/artifactory/libs-release-local. Latest development versions can be obtained from the snapshot repository at http://maven-repository.rhinofly.net:8081/artifactory/libs-snapshot-local.
