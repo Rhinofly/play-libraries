@@ -7,10 +7,10 @@ Are you the Scala programmer we are looking for? Take a look at the [job descrip
 
 This project is not continued. A few usefull libraries have been migrated to their own projects:
 
-- [play-amf](/Rhinofly/play-amf) ActionScript Message Format
-- [play-s3](/Rhinofly/play-s3) Amazon Simple Storage Service
-- [play-mailer](/Rhinofly/play-mailer) Play Mailer
-- [play-aws-utils](/Rhinofly/play-aws-utils) Amazon AWS utils (for example Version 4 signing)
-- [play-jira-exception-processor](/Rhinofly/play-jira-exception-processor) Jira Exception Processor
+- [play-amf](https://github.com/Rhinofly/play-amf) ActionScript Message Format
+- [play-s3](https://github.com/Rhinofly/play-s3) Amazon Simple Storage Service
+- [play-mailer](https://github.com/Rhinofly/play-mailer) Play Mailer
+- [play-aws-utils](https://github.com/Rhinofly/play-aws-utils) Amazon AWS utils (for example Version 4 signing)
+- [play-jira-exception-processor](https://github.com/Rhinofly/play-jira-exception-processor) Jira Exception Processor
 
 Older libraries can be found under the tag `before-removal`
